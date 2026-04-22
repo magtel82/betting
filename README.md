@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VM Bet 2026
 
-## Getting Started
+Privat betting-app för ett grabbgäng inför VM 2026. Spelarna tävlar med fiktiva coins.
 
-First, run the development server:
+**URL**: [bet.telehagen.se](https://bet.telehagen.se)
+
+## Tech-stack
+
+- Next.js (App Router)
+- TypeScript
+- Tailwind CSS
+- [Supabase](https://supabase.com) (Auth, Postgres, RLS)
+- Vercel
+
+## Kom igång
 
 ```bash
+npm install
+cp .env.example .env.local
+# Fyll i .env.local med dina Supabase-nycklar
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Öppna [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Miljövariabler
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variabel | Beskrivning |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only) |
+| `ODDS_API_KEY` | The Odds API (fas 4) |
+| `FOOTBALL_DATA_API_KEY` | football-data.org (fas 4) |
+| `NEXT_PUBLIC_APP_URL` | Publik URL, t.ex. `https://bet.telehagen.se` |
 
-## Learn More
+Se `.env.example` för fullständig lista.
 
-To learn more about Next.js, take a look at the following resources:
+## Databasinställning
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Se [`supabase/README.md`](supabase/README.md) för fullständiga instruktioner.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Snabbstart:**
 
-## Deploy on Vercel
+```bash
+# 1. Länka Supabase-projektet
+supabase link --project-ref <project-ref>
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# 2. Kör migrationer
+supabase db push
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# 3. Kör seed-data (via Dashboard SQL-editor eller psql)
+#    Kör filerna i ordning: supabase/seed/01–04
+```
+
+### Auth-konfiguration (Supabase Dashboard)
+
+1. **Google OAuth**: Authentication → Providers → Google → Enable
+2. **E-post/lösenord**: Authentication → Providers → Email → Enable, stäng av "Confirm email"
+3. Lägg till `https://<din-url>/auth/callback` som Redirect URI
+
+## Projektstruktur
+
+```
+supabase/
+  migrations/   # SQL-migrationer (körs i ordning)
+  seed/         # Seed-data: turnering, lag, matcher
+src/
+  app/          # Next.js App Router-sidor
+  components/   # Delade UI-komponenter
+  lib/supabase/ # Supabase-klienter
+  types/        # TypeScript-typer
+docs/           # Arkitektur, fasplan, spec
+```
+
+Se [`docs/architecture.md`](docs/architecture.md) för full arkitekturgenomgång.
+
+## Bootstrap — första admin
+
+Efter att migrationer och seed körts, gör detta i Supabase Dashboard → SQL-editor:
+
+```sql
+-- 1. Lägg till din Google-adress i whitelist (innan Google-login)
+INSERT INTO invite_whitelist (email) VALUES ('din@googleadress.se');
+
+-- 2. Logga in på /login med Google
+
+-- 3. Hitta ditt user id
+SELECT id, email FROM auth.users ORDER BY created_at DESC LIMIT 5;
+
+-- 4. Lägg till dig som admin i ligan
+INSERT INTO league_members (league_id, user_id, role, match_wallet, special_wallet)
+VALUES (
+  'b1000000-0000-0000-0000-000000000001',
+  '<ditt-user-id>',
+  'admin',
+  5000,
+  1000
+);
+```
+
+Nu kan du öppna `/admin` och bjuda in fler spelare därifrån.
+
+## Fasplan
+
+Se [`docs/phases.md`](docs/phases.md).
+
+## Deploy
+
+Applikationen deployas automatiskt till Vercel vid push till `main`.
+
+DNS: CNAME `bet` → `cname.vercel-dns.com`
