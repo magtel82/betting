@@ -1,20 +1,26 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { placeSlip, type SelectionInput, type PlaceSlipResult } from "@/lib/betting/place-slip";
 
-// Re-export types for UI components in fas 5B
+// Re-export types for UI components
 export type { SelectionInput, PlaceSlipResult };
 
 // ─── placeSlipAction ─────────────────────────────────────────────────────────
 // Server Action wrapper for placing a matchslip.
-// Called from the /bet UI once it is built in fas 5B.
-//
-// selections: 1–5 match picks with outcome and the odds the player saw
-// stake:      whole number of coins (integer, min 10)
+// On success, revalidates /bet so the wallet balance is fresh on next render.
 
 export async function placeSlipAction(
   selections: SelectionInput[],
   stake:      number,
 ): Promise<PlaceSlipResult> {
-  return placeSlip(selections, stake);
+  const result = await placeSlip(selections, stake);
+
+  if (result.ok) {
+    // Refresh server data: wallet balance changed, and /mina-bet will need
+    // the new slip once that page is built in fas 5C.
+    revalidatePath("/bet");
+  }
+
+  return result;
 }
