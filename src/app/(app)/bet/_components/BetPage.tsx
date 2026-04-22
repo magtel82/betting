@@ -129,35 +129,39 @@ export function BetPage({ matches, matchWallet }: Props) {
     setOddsChanged(null);
     setSuccessResult(null);
 
-    setSelections((prev) => {
-      const existing = prev.find((s) => s.matchId === matchId);
+    // Read current selections directly (safe in event handlers — no concurrent
+    // update risk) so we can derive next length and call setPanelOpen separately,
+    // avoiding nested setState calls inside an updater function.
+    const existing = selections.find((s) => s.matchId === matchId);
 
-      if (existing) {
-        if (existing.outcome === outcome) {
-          // Deselect
-          const next = prev.filter((s) => s.matchId !== matchId);
-          if (next.length === 0) setPanelOpen(false);
-          return next;
-        }
-        // Switch outcome for this match
-        return prev.map((s) =>
-          s.matchId === matchId ? { matchId, outcome, oddsSnapshot } : s
-        );
-      }
+    if (existing?.outcome === outcome) {
+      // Deselect: same outcome tapped again
+      const next = selections.filter((s) => s.matchId !== matchId);
+      setSelections(next);
+      if (next.length === 0) setPanelOpen(false);
+      return;
+    }
 
-      if (prev.length >= MAX_SELS) return prev;
-      const next = [...prev, { matchId, outcome, oddsSnapshot }];
-      if (next.length === 1) setPanelOpen(true); // auto-open slip on first pick
-      return next;
-    });
+    if (existing) {
+      // Switch outcome for this match
+      setSelections(selections.map((s) =>
+        s.matchId === matchId ? { matchId, outcome, oddsSnapshot } : s
+      ));
+      return;
+    }
+
+    if (selections.length >= MAX_SELS) return;
+
+    // Add new selection
+    const next = [...selections, { matchId, outcome, oddsSnapshot }];
+    setSelections(next);
+    if (next.length === 1) setPanelOpen(true); // auto-open panel on first pick
   }
 
   function handleRemove(matchId: string) {
-    setSelections((prev) => {
-      const next = prev.filter((s) => s.matchId !== matchId);
-      if (next.length === 0) setPanelOpen(false);
-      return next;
-    });
+    const next = selections.filter((s) => s.matchId !== matchId);
+    setSelections(next);
+    if (next.length === 0) setPanelOpen(false);
   }
 
   function handleClear() {
@@ -236,6 +240,16 @@ export function BetPage({ matches, matchWallet }: Props) {
             Du behöver minst {MIN_WALLET} coins för att lägga ett slip.
           </p>
         )}
+      </div>
+
+      {/* ── Odds-förklaring ──────────────────────────────────────────────── */}
+      <div className="mx-auto max-w-lg px-4 pb-3">
+        <p className="text-xs text-gray-400">
+          Tryck <strong className="text-gray-500">H&thinsp;/&thinsp;X&thinsp;/&thinsp;B</strong> för
+          hemma&thinsp;/&thinsp;oavgjort&thinsp;/&thinsp;borta.
+          Välj 1–5 matcher — oddsen multipliceras i en kombi.{" "}
+          <strong className="text-gray-500">Odds × insats = möjlig vinst.</strong>
+        </p>
       </div>
 
       {/* ── Success banner ───────────────────────────────────────────────── */}

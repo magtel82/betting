@@ -17,9 +17,9 @@ export async function placeSlipAction(
   const result = await placeSlip(selections, stake);
 
   if (result.ok) {
-    // Refresh server data: wallet balance changed, and /mina-bet will need
-    // the new slip once that page is built in fas 5C.
+    // Refresh server data: wallet balance changed, new slip should appear in /mina-bet.
     revalidatePath("/bet");
+    revalidatePath("/mina-bet");
   }
 
   return result;

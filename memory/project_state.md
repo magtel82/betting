@@ -4,7 +4,7 @@ description: Aktuell fas och vad som är byggt i VM Bet 2026
 type: project
 ---
 
-Fas 5B klar (2026-04-22). Nästa = fas 5C (/mina-bet).
+Fas 5C klar (2026-04-22). Nästa = fas 6 (settlement) eller dashboard.
 
 **Why:** Privat betting-app för ett grabbgäng inför VM 2026. Next.js 16 + Supabase + Vercel.
 
@@ -20,8 +20,10 @@ Fas 5B klar (2026-04-22). Nästa = fas 5C (/mina-bet).
 - **Fas 4D:** `/grupper` — gruppställning A-L beräknad från DB, src/lib/group-standings.ts
 - **Fas 5A:** Datamodell + serverlogik — bet_slips, bet_slip_selections, match_wallet_transactions, place_bet_slip RPC, placeSlip() + placeSlipAction()
 - **Fas 5B:** /bet UI — MatchBetCard (H/X/B-knappar), SlipPanel (sticky drawer), BetPage (state), odds_changed-flöde
+- **Fas 5C:** /mina-bet — SlipCard, SlipsView (Mina/Alla-tabs), UX-fix i BetPage, odds-förklaring
 
 ## Nästa steg
 
-- Fas 5C: /mina-bet (egna slip, status, selections)
-- Fas 6: Settlement, inaktivitetsavgift, bonus
+- Fas 6: Settlement, inaktivitetsavgift, bonus (behöver admin-triggers + cron)
+- Dashboard (/) — topplista-snabbvy, senaste händelser
+- Slip-låsning när match startar
