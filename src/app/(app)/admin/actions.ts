@@ -5,7 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncOdds } from "@/lib/sync/odds";
 import { syncResults } from "@/lib/sync/results";
-import { settleMatch, type SettleMatchResult } from "@/lib/betting/settle-match";
+import { settleMatch, type SettleMatchResult }     from "@/lib/betting/settle-match";
+import { lockStartedSlips, type LockSlipsResult }   from "@/lib/betting/lock-slips";
+import { applyInactivityFee, type ApplyInactivityFeeResult } from "@/lib/betting/inactivity-fee";
+import { applyGroupBonus, type GroupBonusResult }   from "@/lib/betting/group-bonus";
 import type { TournamentStatus, MatchStatus } from "@/types";
 
 export type ActionState = { error: string } | { success: string } | null;
@@ -487,6 +490,68 @@ export async function settleMatchAction(matchId: string): Promise<SettleMatchRes
       slips_void:          slipsVoid,
       total_payout:        totalPayout,
       selections_settled:  selectionsSettled,
+    });
+    revalidatePath("/admin");
+    revalidatePath("/mina-bet");
+  }
+
+  return result;
+}
+
+// ─── Lock started slips ───────────────────────────────────────────────────────
+
+export async function lockSlipsAction(): Promise<LockSlipsResult> {
+  const ctx = await getAdminContext();
+  if (!ctx) return { ok: false, code: "unauthorized", error: "Ingen behörighet" };
+
+  const result = await lockStartedSlips();
+
+  if (result.ok && result.locked > 0) {
+    await writeAuditLog(ctx.supabase, ctx.user.id, "lock_slips", "bet_slips", null, {
+      locked: result.locked,
+    });
+    revalidatePath("/admin");
+    revalidatePath("/mina-bet");
+  }
+
+  return result;
+}
+
+// ─── Apply inactivity fee ─────────────────────────────────────────────────────
+
+export async function applyInactivityFeeAction(
+  feeDate: string,
+): Promise<ApplyInactivityFeeResult> {
+  const ctx = await getAdminContext();
+  if (!ctx) {
+    return { ok: false, code: "unauthorized", error: "Ingen behörighet" };
+  }
+
+  const result = await applyInactivityFee(ctx.leagueId, feeDate);
+
+  if (result.ok && result.charged > 0) {
+    await writeAuditLog(ctx.supabase, ctx.user.id, "inactivity_fee", "league_members", null, {
+      fee_date: feeDate,
+      charged:  result.charged,
+      active:   result.active,
+    });
+    revalidatePath("/admin");
+  }
+
+  return result;
+}
+
+// ─── Apply group bonus ────────────────────────────────────────────────────────
+
+export async function applyGroupBonusAction(): Promise<GroupBonusResult> {
+  const ctx = await getAdminContext();
+  if (!ctx) return { ok: false, code: "unauthorized", error: "Ingen behörighet" };
+
+  const result = await applyGroupBonus(ctx.leagueId);
+
+  if (result.ok && "bonuses" in result) {
+    await writeAuditLog(ctx.supabase, ctx.user.id, "group_bonus", "league_members", null, {
+      members: result.bonuses.length,
     });
     revalidatePath("/admin");
     revalidatePath("/mina-bet");

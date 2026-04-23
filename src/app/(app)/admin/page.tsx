@@ -9,6 +9,7 @@ import { MatchOddsForm } from "./_components/MatchOddsForm";
 import { MatchResultForm } from "./_components/MatchResultForm";
 import { SyncPanel } from "./_components/SyncPanel";
 import { SettlePanel } from "./_components/SettlePanel";
+import { EconomyPanel } from "./_components/EconomyPanel";
 import type {
   League,
   Tournament,
@@ -83,6 +84,12 @@ export default async function AdminPage() {
 
   const settleMatches = (settleMatchesRes.data ?? []) as MatchWithTeams[];
 
+  // Today's date in Swedish time, for the inactivity fee date picker default
+  const todaySwedish = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Stockholm",
+    year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+
   if (!leagueWithTournament) {
     return (
       <>
@@ -111,6 +118,9 @@ export default async function AdminPage() {
         {settleMatches.length > 0 && (
           <SettlePanel matches={settleMatches} />
         )}
+
+        {/* Ekonomi: lås slip, inaktivitetsavgift, gruppbonus */}
+        <EconomyPanel defaultFeeDate={todaySwedish} />
 
         {/* Matchodds – manuell fallback */}
         {matchesWithOdds.length > 0 && (

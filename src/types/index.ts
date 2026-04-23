@@ -153,6 +153,7 @@ export interface MatchWalletTransaction {
   amount:           number;
   type:             WalletTxType;
   slip_id:          string | null;
+  fee_date:         string | null; // Swedish calendar date for inactivity_fee / group_bonus
   created_at:       string;
 }
 

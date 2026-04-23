@@ -593,3 +593,78 @@ För varje unikt slip som påverkades i fas 2:
 | `src/lib/betting/settle-match.ts` | `settleMatch(matchId)` — anropar RPC via admin-klient |
 | `src/app/(app)/admin/actions.ts` | `settleMatchAction(matchId)` — verifierar admin, anropar settleMatch, audit-logg |
 | `src/app/(app)/admin/_components/SettlePanel.tsx` | Admin-UI: välj match, trigga, visa detaljerat resultat |
+
+## Slip-låsning, inaktivitetsavgift och gruppbonus (fas 6B)
+
+### Schema-tillägg
+
+`match_wallet_transactions.fee_date date` — nullable. Sätts vid `inactivity_fee`-transaktioner till den svenska kalenderdatum som avgiften avser. Används som idempotensnyckeln: en member kan bara ha en `inactivity_fee`-transaktion per `fee_date`.
+
+### `lock_started_slips()` — RPC
+
+Enkel UPDATE-sats som sätter `status = 'locked', locked_at = now()` på alla `open` bet_slips där minst en selection avser en match med `scheduled_at <= now()`.
+
+- Naturligt idempotent: `WHERE status = 'open'` — redan låsta slip berörs inte
+- Designad för att kunna anropas från `syncResults()` eller cron utan extra logik
+- Returnerar `{ ok: true, locked: N }`
+
+### `apply_inactivity_fee(p_league_id, p_fee_date)` — RPC
+
+**Steg:**
+1. Kontrollera att `p_fee_date` är en matchdag (minst en icke-void match finns)
+2. För varje aktiv ligamedlem (med FOR UPDATE):
+   - Idempotenscheck: `fee_date = p_fee_date AND type = 'inactivity_fee'` i ledgern
+   - Hoppa över om saldo = 0
+   - **Aktivitetscheck 1:** La ett nytt slip p_fee_date (platstid: Europe/Stockholm)?
+   - **Aktivitetscheck 2:** Har ett öppet/låst slip med en match den dagen?
+   - Om inaktiv: dra `min(50, match_wallet)` (inga negativa saldon)
+   - Inserta ledgerpost med `type = 'inactivity_fee', fee_date = p_fee_date`
+
+**Idempotens:** Kombinationen `(league_member_id, type, fee_date)` i ledgern förhindrar dubbelladdning.
+
+**Datumhantering:** `p_fee_date` är en ISO-datumstring (`YYYY-MM-DD`) som representerar en svensk kalenderdatum. Jämförelse mot `scheduled_at` och `placed_at` görs via `(col at time zone 'Europe/Stockholm')::date`.
+
+### `apply_group_bonus(p_league_id)` — RPC
+
+**Steg:**
+1. Kontrollera att alla gruppmatcher (`stage = 'group'`) är `finished` eller `void`
+2. Idempotenscheck: finns redan en `group_bonus`-transaktion för någon i ligan?
+3. Beräkna ranking med PostgreSQL `RANK()`:
+
+```sql
+rank() over (
+  order by
+    (match_wallet + special_wallet) desc,   -- total_coins
+    max(final_odds) filter (won slips) desc, -- bästa vinnande slip
+    count(won slips) desc                    -- flest vunna slip
+)
+```
+
+`RANK()` ger 1, 2, 2, 4 för oavgjort — "nästa placering hoppas över" per spec.
+
+4. Bonustabell:
+   | Placering | Bonus |
+   |---|---|
+   | 1 | +500 |
+   | 2 | +300 |
+   | 3 | +200 |
+   | 4+ | +100 |
+5. Kreditera `match_wallet` och inserta `group_bonus`-ledgertransaktioner
+
+**Tie-breakers i detalj:**
+- `total_coins` = aktuellt `match_wallet + special_wallet` vid tillfället
+- `best_win_odds` = max `final_odds` (void-justerade odds) bland vunna slip; 0 om inga vunna
+- `won_slips` = antal slip med `status = 'won'`
+- Delad placering: RANK() ger samma siffra → alla delar platsen och dess bonus
+
+### TypeScript-lager
+
+| Fil | Roll |
+|---|---|
+| `src/lib/betting/lock-slips.ts` | `lockStartedSlips()` |
+| `src/lib/betting/inactivity-fee.ts` | `applyInactivityFee(leagueId, date)` |
+| `src/lib/betting/group-bonus.ts` | `applyGroupBonus(leagueId)` |
+| `src/app/(app)/admin/actions.ts` | `lockSlipsAction`, `applyInactivityFeeAction`, `applyGroupBonusAction` |
+| `src/app/(app)/admin/_components/EconomyPanel.tsx` | Admin-UI med tre sektioner |
+
+Alla RPCer anropas via service_role (admin verifieras i TypeScript-lagret). EXECUTE revokad från `public`.
