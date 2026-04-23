@@ -467,10 +467,56 @@ Hela slip-placeringen sker atomärt i en enda DB-transaktion via en `SECURITY DE
 
 | Fil | Roll |
 |---|---|
-| `src/lib/betting/place-slip.ts` | Kärn-funktion `placeSlip()` — strukturvalidering, session, RPC-anrop, felöversättning |
-| `src/app/(app)/bet/actions.ts` | Server Action `placeSlipAction()` — tunn wrapper, redo för /bet-UI |
+| `src/lib/betting/place-slip.ts` | `placeSlip()` — strukturvalidering, session, RPC-anrop, felöversättning |
+| `src/lib/betting/cancel-slip.ts` | `cancelSlip()` — anropar `cancel_bet_slip` RPC |
+| `src/app/(app)/bet/actions.ts` | `placeSlipAction()`, `amendSlipAction()` — Server Actions |
+| `src/app/(app)/mina-bet/actions.ts` | `deleteSlipAction()` — Server Action för Ta bort |
 
 **Säkerhetsmodell:**
-- RPC anropas med user-klienten (`createClient()`) — `auth.uid()` reflekterar den inloggade användaren
-- SECURITY DEFINER ger RPC-funktionen eleverade DB-privilegier utan att exponera service role-nyckeln
+- RPCer anropas med user-klienten (`createClient()`) — `auth.uid()` reflekterar den inloggade användaren
+- SECURITY DEFINER ger RPC-funktionerna eleverade DB-privilegier utan att exponera service role-nyckeln
 - Spelaren kan aldrig direkt INSERT/UPDATE i bettingtabellerna via RLS
+
+## Ändra och ta bort matchslip (fas 5D)
+
+### Regler
+
+Före första matchstart i slipet får spelaren:
+- **Ta bort**: slip → `status = 'cancelled'`, stake återbetalas till `match_wallet`
+- **Ändra**: gammalt slip annulleras + insats återbetalas + nytt slip skapas med nya selections och aktuella odds
+
+Villkor för att ett slip ska vara ändringsbart:
+- `status = 'open'`
+- Alla selections avser matcher med `scheduled_at > now()`
+
+### RPCer (migration 0006)
+
+**`cancel_bet_slip(p_slip_id)`**
+Atomär annullering:
+1. Lås slip + member (FOR UPDATE)
+2. Verifiera `auth.uid()` äger slipet
+3. Verifiera `status = 'open'`
+4. Verifiera att ingen match startat (`scheduled_at > now()` för alla selections)
+5. Sätt `status = 'cancelled'`
+6. `match_wallet += stake`
+7. Lägg in `bet_refund`-transaktion i ledgern
+
+**`amend_bet_slip(p_old_slip_id, p_stake, p_selections)`**
+Atomic cancel + ny placering i en enda transaktion. Kritisk egenskap: **all validering av nya selections körs FÖRE alla skrivningar**. Om nya odds har ändrats (`odds_changed`) rullas hela transaktionen tillbaka — gamla slipet förblir intakt och spelaren kan bekräfta de nya oddsen och försöka igen.
+
+Stake-max för det nya slipet beräknas mot `match_wallet + gamla_stake` (effektiv balans efter återbetalning).
+
+### UI-flöde
+
+**Ta bort** (från /mina-bet):
+1. Tryck "Ta bort" → inline confirm visas
+2. Bekräfta → `deleteSlipAction(slipId)` → `cancel_bet_slip` RPC → sida revalideras
+
+**Ändra** (från /mina-bet → /bet):
+1. Tryck "Ändra" → navigerar till `/bet?amend=<slipId>`
+2. Servern hämtar gamla slipets selections, mappar till aktuella odds, pre-fyller `BetPage`
+3. Gul banner visas: "Du ändrar ett slip. Det gamla annulleras när du skickar det nya."
+4. Spelaren modifierar selections och/eller stake → trycker "Ändra slip"
+5. `amendSlipAction(oldSlipId, selections, stake)` → `amend_bet_slip` RPC
+6. Vid `odds_changed`: gamla slipet är intakt, UI visar nya odds och frågar om bekräftelse
+7. Vid success: "Slipet är ändrat!" + länk till /mina-bet

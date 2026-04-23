@@ -1,14 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
 import { placeSlip, type SelectionInput, type PlaceSlipResult } from "@/lib/betting/place-slip";
 
 // Re-export types for UI components
 export type { SelectionInput, PlaceSlipResult };
 
 // ─── placeSlipAction ─────────────────────────────────────────────────────────
-// Server Action wrapper for placing a matchslip.
-// On success, revalidates /bet so the wallet balance is fresh on next render.
+// Server Action wrapper for placing a new matchslip.
 
 export async function placeSlipAction(
   selections: SelectionInput[],
@@ -17,10 +17,107 @@ export async function placeSlipAction(
   const result = await placeSlip(selections, stake);
 
   if (result.ok) {
-    // Refresh server data: wallet balance changed, new slip should appear in /mina-bet.
     revalidatePath("/bet");
     revalidatePath("/mina-bet");
   }
 
   return result;
+}
+
+// ─── amendSlipAction ─────────────────────────────────────────────────────────
+// Atomically cancels an old open slip and places a new one via the
+// amend_bet_slip RPC — single DB transaction so odds_changed errors
+// leave the old slip intact (the caller can retry with updated odds).
+
+const AMEND_ERRORS: Record<string, string> = {
+  unauthorized:           "Ingen behörighet att ändra detta slip",
+  member_not_found:       "Ditt ligamedlemskap hittades inte",
+  slip_not_found:         "Det ursprungliga slipet hittades inte",
+  slip_not_open:          "Slipet är redan låst eller avgjort",
+  match_already_started:  "En match i det gamla slipet har startat — det kan inte längre ändras",
+  league_closed:          "Ligan är stängd för betting",
+  invalid_selection_count:"Slipet måste ha 1–5 matcher",
+  stake_too_low:          "Minsta insats är 10 coins",
+  stake_exceeds_limit:    "Insatsen överstiger maxgränsen (30% av saldo)",
+  insufficient_balance:   "Otillräckligt saldo",
+  invalid_outcome:        "Ogiltigt utfall",
+  match_not_found:        "Matchen hittades inte",
+  match_not_bettable:     "Matchen är inte spelbar — den har redan startat eller avslutats",
+  no_odds:                "Odds saknas för en av matcherna",
+  odds_changed:           "Oddsen har ändrats sedan sidan laddades — bekräfta de nya oddsen och försök igen",
+};
+
+export async function amendSlipAction(
+  oldSlipId:  string,
+  selections: SelectionInput[],
+  stake:      number,
+): Promise<PlaceSlipResult> {
+  if (!oldSlipId) {
+    return { ok: false, code: "invalid_slip_id", error: "Ogiltigt slip-ID" };
+  }
+
+  const supabase = await createClient();
+
+  // Resolve league_member_id needed for the quick client-side stake check.
+  // The RPC performs the authoritative check atomically.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, code: "not_authenticated", error: "Inte inloggad" };
+  }
+
+  const { data: rpcData, error: rpcError } = await supabase.rpc("amend_bet_slip", {
+    p_old_slip_id: oldSlipId,
+    p_stake:       stake,
+    p_selections:  selections.map((s) => ({
+      match_id:      s.matchId,
+      outcome:       s.outcome,
+      odds_snapshot: s.oddsSnapshot,
+    })),
+  });
+
+  if (rpcError) {
+    console.error("[amendSlipAction] RPC error:", rpcError);
+    return { ok: false, code: "rpc_error", error: "Internt fel — försök igen" };
+  }
+
+  const result = rpcData as Record<string, unknown>;
+
+  if (result.error) {
+    const code = result.error as string;
+
+    if (code === "odds_changed") {
+      return {
+        ok:          false,
+        code,
+        error:       AMEND_ERRORS.odds_changed,
+        matchId:     result.match_id as string | undefined,
+        currentOdds: result.current != null ? Number(result.current) : undefined,
+      };
+    }
+
+    if (code === "stake_exceeds_limit") {
+      return {
+        ok:       false,
+        code,
+        error:    AMEND_ERRORS.stake_exceeds_limit,
+        maxStake: result.max_stake as number | undefined,
+      };
+    }
+
+    return {
+      ok:    false,
+      code,
+      error: AMEND_ERRORS[code] ?? "Något gick fel — försök igen",
+    };
+  }
+
+  revalidatePath("/bet");
+  revalidatePath("/mina-bet");
+
+  return {
+    ok:              true,
+    slipId:          result.slip_id as string,
+    combinedOdds:    Number(result.combined_odds),
+    potentialPayout: result.potential_payout as number,
+  };
 }

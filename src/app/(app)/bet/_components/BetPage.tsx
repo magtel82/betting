@@ -1,34 +1,31 @@
 "use client";
 
 import { useState, useMemo, useTransition } from "react";
-import { placeSlipAction } from "../actions";
+import Link from "next/link";
+import { placeSlipAction, amendSlipAction } from "../actions";
 import { MatchBetCard } from "./MatchBetCard";
 import { SlipPanel, type LocalSelection } from "./SlipPanel";
 import type { MatchWithTeamsAndOdds, BetOutcome } from "@/types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MIN_STAKE    = 10;
-const MAX_SELS     = 5;
-const MIN_WALLET   = 34; // floor(34 * 0.3) = 10 = minimum stake
+const MIN_STAKE  = 10;
+const MAX_SELS   = 5;
+const MIN_WALLET = 34; // floor(34 * 0.3) = 10 = minimum stake
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
 function swDateKey(utc: string) {
   return new Date(utc).toLocaleDateString("sv-SE", {
     timeZone: "Europe/Stockholm",
-    year:     "numeric",
-    month:    "2-digit",
-    day:      "2-digit",
+    year: "numeric", month: "2-digit", day: "2-digit",
   });
 }
 
 function swDateLabel(utc: string) {
   return new Date(utc).toLocaleDateString("sv-SE", {
     timeZone: "Europe/Stockholm",
-    weekday:  "long",
-    day:      "numeric",
-    month:    "long",
+    weekday: "long", day: "numeric", month: "long",
   });
 }
 
@@ -38,6 +35,7 @@ interface SuccessResult {
   slipId:          string;
   combinedOdds:    number;
   potentialPayout: number;
+  wasAmend:        boolean;
 }
 
 interface OddsChangedInfo {
@@ -46,38 +44,56 @@ interface OddsChangedInfo {
 }
 
 interface Props {
-  matches:     MatchWithTeamsAndOdds[];
-  matchWallet: number;
+  matches:             MatchWithTeamsAndOdds[];
+  matchWallet:         number;
+  amendSlipId?:        string;       // set when navigated from /mina-bet with ?amend=<id>
+  prefilledSelections?:LocalSelection[]; // old slip's selections mapped to current odds
+  prefilledStake?:     number;       // old slip's stake (as starting value)
 }
 
 // ─── BetPage ─────────────────────────────────────────────────────────────────
 
-export function BetPage({ matches, matchWallet }: Props) {
-  const maxStake = Math.floor(matchWallet * 0.3);
-  const canBet   = matchWallet >= MIN_WALLET;
+export function BetPage({
+  matches,
+  matchWallet,
+  amendSlipId,
+  prefilledSelections,
+  prefilledStake,
+}: Props) {
+  // isAmendMode tracks whether we're still amending a specific old slip.
+  // Cleared on success so subsequent submits create fresh slips.
+  const [isAmendMode,    setIsAmendMode]   = useState(!!amendSlipId);
+  const activeAmendId = isAmendMode ? amendSlipId : undefined;
+
+  // For amend mode: the old stake will be refunded, increasing effective balance.
+  const amendRefund = isAmendMode ? (prefilledStake ?? 0) : 0;
+  const effectiveWallet = matchWallet + amendRefund;
+  const maxStake = Math.floor(effectiveWallet * 0.3);
+  const canBet   = effectiveWallet >= MIN_WALLET;
 
   // ── State ───────────────────────────────────────────────────────────────────
-  const [selections,      setSelections]     = useState<LocalSelection[]>([]);
-  const [stake,           setStake]          = useState<string>(
-    String(Math.min(50, maxStake > 0 ? maxStake : 10))
+  const [selections,      setSelections]   = useState<LocalSelection[]>(
+    prefilledSelections ?? []
   );
-  const [panelOpen,       setPanelOpen]      = useState(false);
-  const [isPending,       startTransition]   = useTransition();
-  const [errorMsg,        setErrorMsg]       = useState<string | null>(null);
-  const [oddsChangedInfo, setOddsChanged]    = useState<OddsChangedInfo | null>(null);
-  const [successResult,   setSuccessResult]  = useState<SuccessResult | null>(null);
+  const [stake,           setStake]        = useState<string>(
+    String(Math.min(prefilledStake ?? 50, maxStake > 0 ? maxStake : 10))
+  );
+  const [panelOpen,       setPanelOpen]    = useState(
+    (prefilledSelections?.length ?? 0) > 0  // auto-open if pre-filled
+  );
+  const [isPending,       startTransition] = useTransition();
+  const [errorMsg,        setErrorMsg]     = useState<string | null>(null);
+  const [oddsChangedInfo, setOddsChanged]  = useState<OddsChangedInfo | null>(null);
+  const [successResult,   setSuccessResult]= useState<SuccessResult | null>(null);
 
   // ── Derived data ────────────────────────────────────────────────────────────
 
-  // Only show matches that haven't started yet (client-side time check as UX aid;
-  // the RPC will re-validate server-side)
   const pageLoadTime = useMemo(() => Date.now(), []);
   const upcomingMatches = useMemo(
     () => matches.filter((m) => new Date(m.scheduled_at).getTime() > pageLoadTime),
     [matches, pageLoadTime]
   );
 
-  // Group by Swedish calendar day, preserving chronological order
   const dayGroups = useMemo(() => {
     const map = new Map<string, { label: string; matches: MatchWithTeamsAndOdds[] }>();
     for (const m of upcomingMatches) {
@@ -88,7 +104,6 @@ export function BetPage({ matches, matchWallet }: Props) {
     return Array.from(map.values());
   }, [upcomingMatches]);
 
-  // Quick lookup: matchId → match (for the slip panel to render team names)
   const matchMap = useMemo(() => {
     const m = new Map<string, MatchWithTeamsAndOdds>();
     for (const match of matches) m.set(match.id, match);
@@ -129,13 +144,9 @@ export function BetPage({ matches, matchWallet }: Props) {
     setOddsChanged(null);
     setSuccessResult(null);
 
-    // Read current selections directly (safe in event handlers — no concurrent
-    // update risk) so we can derive next length and call setPanelOpen separately,
-    // avoiding nested setState calls inside an updater function.
     const existing = selections.find((s) => s.matchId === matchId);
 
     if (existing?.outcome === outcome) {
-      // Deselect: same outcome tapped again
       const next = selections.filter((s) => s.matchId !== matchId);
       setSelections(next);
       if (next.length === 0) setPanelOpen(false);
@@ -143,7 +154,6 @@ export function BetPage({ matches, matchWallet }: Props) {
     }
 
     if (existing) {
-      // Switch outcome for this match
       setSelections(selections.map((s) =>
         s.matchId === matchId ? { matchId, outcome, oddsSnapshot } : s
       ));
@@ -152,10 +162,9 @@ export function BetPage({ matches, matchWallet }: Props) {
 
     if (selections.length >= MAX_SELS) return;
 
-    // Add new selection
     const next = [...selections, { matchId, outcome, oddsSnapshot }];
     setSelections(next);
-    if (next.length === 1) setPanelOpen(true); // auto-open panel on first pick
+    if (next.length === 1) setPanelOpen(true);
   }
 
   function handleRemove(matchId: string) {
@@ -177,17 +186,21 @@ export function BetPage({ matches, matchWallet }: Props) {
     setErrorMsg(null);
 
     startTransition(async () => {
-      const result = await placeSlipAction(selections, stakeNum);
+      const result = activeAmendId
+        ? await amendSlipAction(activeAmendId, selections, stakeNum)
+        : await placeSlipAction(selections, stakeNum);
 
       if (result.ok) {
         setSuccessResult({
           slipId:          result.slipId,
           combinedOdds:    result.combinedOdds,
           potentialPayout: result.potentialPayout,
+          wasAmend:        !!activeAmendId,
         });
         setSelections([]);
-        setStake(String(Math.min(50, maxStake)));
+        setStake(String(Math.min(50, Math.floor(matchWallet * 0.3))));
         setOddsChanged(null);
+        setIsAmendMode(false); // done amending — next submit is a fresh placement
         setPanelOpen(false);
       } else if (
         !result.ok &&
@@ -195,12 +208,11 @@ export function BetPage({ matches, matchWallet }: Props) {
         result.matchId !== undefined &&
         result.currentOdds !== undefined
       ) {
+        // All validation ran before any writes: old slip is still intact.
+        // Update the snapshot so the next submit uses the confirmed odds.
         const { matchId, currentOdds } = result;
-        // Update the stored odds snapshot so the next submit uses the new value
         setSelections((prev) =>
-          prev.map((s) =>
-            s.matchId === matchId ? { ...s, oddsSnapshot: currentOdds } : s
-          )
+          prev.map((s) => s.matchId === matchId ? { ...s, oddsSnapshot: currentOdds } : s)
         );
         setOddsChanged({ matchId, newOdds: currentOdds });
       } else if (!result.ok) {
@@ -214,8 +226,29 @@ export function BetPage({ matches, matchWallet }: Props) {
   const showPanel = selections.length > 0;
 
   return (
-    // Extra bottom padding so content never hides behind the fixed slip panel
     <div className={showPanel ? "pb-28" : "pb-6"}>
+
+      {/* ── Amend mode banner ────────────────────────────────────────────── */}
+      {isAmendMode && !successResult && (
+        <div className="mx-auto max-w-lg px-4 pt-3 pb-1">
+          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+            <span className="mt-px shrink-0 text-amber-500">✎</span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-amber-800">Du ändrar ett slip</p>
+              <p className="mt-0.5 text-xs text-amber-700">
+                Det gamla slipet annulleras och insatsen återbetalas när du skickar det nya.
+                Välj matcherna du vill ha, justera insatsen och tryck Ändra slip.
+              </p>
+            </div>
+            <Link
+              href="/mina-bet"
+              className="ml-auto shrink-0 text-xs text-amber-600 underline"
+            >
+              Avbryt
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* ── Wallet info bar ──────────────────────────────────────────────── */}
       <div className="mx-auto max-w-lg px-4 py-3">
@@ -226,6 +259,15 @@ export function BetPage({ matches, matchWallet }: Props) {
               {matchWallet.toLocaleString("sv-SE")} coins
             </strong>
           </span>
+          {isAmendMode && amendRefund > 0 && (
+            <>
+              <span className="text-gray-200">+</span>
+              <span className="text-amber-600">
+                återbetalas{" "}
+                <strong>{amendRefund.toLocaleString("sv-SE")}</strong>
+              </span>
+            </>
+          )}
           <span className="text-gray-200">|</span>
           <span>
             Max insats:{" "}
@@ -245,10 +287,12 @@ export function BetPage({ matches, matchWallet }: Props) {
       {/* ── Odds-förklaring ──────────────────────────────────────────────── */}
       <div className="mx-auto max-w-lg px-4 pb-3">
         <p className="text-xs text-gray-400">
-          Tryck <strong className="text-gray-500">H&thinsp;/&thinsp;X&thinsp;/&thinsp;B</strong> för
-          hemma&thinsp;/&thinsp;oavgjort&thinsp;/&thinsp;borta.
+          Tryck{" "}
+          <strong className="text-gray-500">H&thinsp;/&thinsp;X&thinsp;/&thinsp;B</strong>{" "}
+          för hemma&thinsp;/&thinsp;oavgjort&thinsp;/&thinsp;borta.
           Välj 1–5 matcher — oddsen multipliceras i en kombi.{" "}
           <strong className="text-gray-500">Odds × insats = möjlig vinst.</strong>
+          {" "}Odds visas vid sidladdning — om de ändras innan du skickar ber vi dig bekräfta.
         </p>
       </div>
 
@@ -256,19 +300,26 @@ export function BetPage({ matches, matchWallet }: Props) {
       {successResult && (
         <div className="mx-auto max-w-lg px-4 pb-3">
           <div className="rounded-xl border border-green-200 bg-green-50 p-4">
-            <p className="text-sm font-semibold text-green-800">Slipet är placerat!</p>
+            <p className="text-sm font-semibold text-green-800">
+              {successResult.wasAmend ? "Slipet är ändrat!" : "Slipet är placerat!"}
+            </p>
             <p className="mt-1 text-xs text-green-700">
               Möjlig vinst:{" "}
               <strong>{successResult.potentialPayout.toLocaleString("sv-SE")} coins</strong>
               {" "}· Odds: {successResult.combinedOdds.toFixed(2)}x
             </p>
-            <button
-              type="button"
-              onClick={() => setSuccessResult(null)}
-              className="mt-2 text-xs text-green-700 underline"
-            >
-              Stäng
-            </button>
+            <div className="mt-2 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setSuccessResult(null)}
+                className="text-xs text-green-700 underline"
+              >
+                Stäng
+              </button>
+              <Link href="/mina-bet" className="text-xs text-green-700 underline">
+                Se dina slip →
+              </Link>
+            </div>
           </div>
         </div>
       )}
@@ -323,6 +374,7 @@ export function BetPage({ matches, matchWallet }: Props) {
           errorMsg={errorMsg}
           oddsChangedInfo={oddsChangedInfo}
           isOpen={panelOpen}
+          isAmendMode={isAmendMode}
           onToggleOpen={() => setPanelOpen((o) => !o)}
           onStakeChange={setStake}
           onRemoveSelection={handleRemove}

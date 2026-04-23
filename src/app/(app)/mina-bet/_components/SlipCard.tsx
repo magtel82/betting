@@ -1,3 +1,8 @@
+"use client";
+
+import { useState, useTransition, useMemo } from "react";
+import Link from "next/link";
+import { deleteSlipAction } from "../actions";
 import type { SlipStatus, BetStatus, BetOutcome } from "@/types";
 
 // ─── Shared types (local to mina-bet) ────────────────────────────────────────
@@ -86,10 +91,44 @@ interface Props {
   isOwn:      boolean;
 }
 
+type DeleteState = "idle" | "confirming" | "error";
+
 export function SlipCard({ slip, showPlayer, isOwn }: Props) {
   const { label: statusLabel, cls: statusCls } = SLIP_STATUS_CFG[slip.status];
-  const isMulti = slip.selections.length > 1;
+  const isMulti    = slip.selections.length > 1;
   const playerName = slip.member?.profile?.display_name ?? "Okänd";
+
+  // A slip is modifiable when it is open AND no match has started.
+  // This is a client-side approximation — the server RPCs enforce the real rule.
+  const isModifiable = useMemo(() => {
+    if (slip.status !== "open") return false;
+    const now = Date.now();
+    return slip.selections.every(
+      (sel) => sel.match && new Date(sel.match.scheduled_at).getTime() > now
+    );
+  }, [slip.status, slip.selections]);
+
+  // ── Delete state ─────────────────────────────────────────────────────────────
+  const [deleteState, setDeleteState] = useState<DeleteState>("idle");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isPending,   startTransition] = useTransition();
+
+  function handleDeleteClick() {
+    if (deleteState === "idle") {
+      setDeleteState("confirming");
+      return;
+    }
+    if (deleteState === "confirming") {
+      startTransition(async () => {
+        const result = await deleteSlipAction(slip.id);
+        if (!result.ok) {
+          setDeleteError(result.error);
+          setDeleteState("error");
+        }
+        // On success, the page revalidates and this card disappears.
+      });
+    }
+  }
 
   return (
     <article
@@ -106,6 +145,9 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
           {showPlayer && (
             <span className="text-xs text-gray-600 font-medium">{playerName}</span>
           )}
+          {isOwn && isModifiable && (
+            <span className="text-[10px] text-gray-400">· ändringsbar</span>
+          )}
         </div>
         <span className="text-xs text-gray-400 tabular-nums">
           {swDateTime(slip.placed_at)}
@@ -115,17 +157,14 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
       {/* ── Selections ─────────────────────────────────────────────────────── */}
       <ul className="divide-y divide-gray-100 px-3">
         {slip.selections.map((sel) => {
-          const dot = BET_STATUS_DOT[sel.status];
+          const dot   = BET_STATUS_DOT[sel.status];
           const match = sel.match;
           const home  = match?.home_team;
           const away  = match?.away_team;
-          const label = match
-            ? stageLabel(match.stage, match.group_letter)
-            : "";
+          const label = match ? stageLabel(match.stage, match.group_letter) : "";
 
           return (
             <li key={sel.id} className="flex items-center justify-between gap-2 py-2">
-              {/* Match + outcome */}
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-gray-900">
                   {home?.flag_emoji} {home?.short_name ?? "?"}&nbsp;–&nbsp;
@@ -136,7 +175,6 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
                 )}
               </div>
 
-              {/* Outcome label + odds + status dot */}
               <div className="flex shrink-0 items-center gap-1.5">
                 <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-700">
                   {OUTCOME_LABEL[sel.outcome]}
@@ -172,7 +210,6 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
           </span>
         </div>
 
-        {/* Potential payout or actual outcome */}
         <div className="text-right">
           {slip.status === "won" ? (
             <span className="text-sm font-bold text-green-700 tabular-nums">
@@ -192,6 +229,54 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
           )}
         </div>
       </div>
+
+      {/* ── Actions (only for own modifiable slips) ──────────────────────── */}
+      {isOwn && isModifiable && (
+        <div className="border-t border-gray-100 px-3 py-2">
+          {deleteState === "error" && deleteError && (
+            <p className="mb-2 text-xs text-red-600">{deleteError}</p>
+          )}
+
+          <div className="flex items-center gap-2">
+            {/* Ändra — navigates to /bet?amend=<id> */}
+            <Link
+              href={`/bet?amend=${slip.id}`}
+              className="flex-1 rounded-lg border border-gray-200 py-2 text-center text-xs font-medium text-gray-600 hover:bg-gray-50 active:bg-gray-100"
+            >
+              Ändra
+            </Link>
+
+            {/* Ta bort — two-step inline confirmation */}
+            {deleteState === "idle" || deleteState === "error" ? (
+              <button
+                type="button"
+                onClick={handleDeleteClick}
+                className="flex-1 rounded-lg border border-red-200 py-2 text-xs font-medium text-red-600 hover:bg-red-50 active:bg-red-100"
+              >
+                Ta bort
+              </button>
+            ) : deleteState === "confirming" ? (
+              <div className="flex flex-1 gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleDeleteClick}
+                  disabled={isPending}
+                  className="flex-1 rounded-lg bg-red-600 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isPending ? "Tar bort…" : "Bekräfta"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeleteState("idle")}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-500 hover:bg-gray-50"
+                >
+                  Avbryt
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
     </article>
   );
 }

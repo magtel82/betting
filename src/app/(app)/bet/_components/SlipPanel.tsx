@@ -36,6 +36,7 @@ interface Props {
   errorMsg:         string | null;
   oddsChangedInfo:  OddsChangedInfo | null;
   isOpen:           boolean;
+  isAmendMode:      boolean;
   onToggleOpen:     () => void;
   onStakeChange:    (val: string) => void;
   onRemoveSelection:(matchId: string) => void;
@@ -58,6 +59,7 @@ export function SlipPanel({
   errorMsg,
   oddsChangedInfo,
   isOpen,
+  isAmendMode,
   onToggleOpen,
   onStakeChange,
   onRemoveSelection,
@@ -268,10 +270,12 @@ export function SlipPanel({
               }`}
             >
               {isPending
-                ? "Placerar…"
+                ? (isAmendMode ? "Ändrar…" : "Placerar…")
                 : hasOddsChanged
                   ? "Bekräfta och skicka"
-                  : "Lägg slip"}
+                  : isAmendMode
+                    ? "Ändra slip"
+                    : "Lägg slip"}
             </button>
           </div>
         </div>
