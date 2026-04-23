@@ -520,3 +520,76 @@ Stake-max för det nya slipet beräknas mot `match_wallet + gamla_stake` (effekt
 5. `amendSlipAction(oldSlipId, selections, stake)` → `amend_bet_slip` RPC
 6. Vid `odds_changed`: gamla slipet är intakt, UI visar nya odds och frågar om bekräftelse
 7. Vid success: "Slipet är ändrat!" + länk till /mina-bet
+
+## Settlement — matchslip (fas 6A)
+
+### Datamodell-tillägg
+
+`bet_slips.final_odds numeric(10,4)` — nullable. Null tills slipet är avgjort. Innehåller de void-justerade kombinerade oddsen (produkt av bara de selections som vann). Används för utbetalning, statistik och tie-breakers. Skiljer sig från `combined_odds` (placeringsögonblicksbild) när en eller flera selections void:ades.
+
+### `settle_match(p_match_id uuid)` — PostgreSQL RPC (migration 0007)
+
+Anropas med service_role (EXECUTE revokad från `public`). Körs i tre faser i en enda transaktion.
+
+**Fas 1 — validera match:**
+- Matchen måste ha `status = 'finished'` (med scores) eller `status = 'void'`
+- Annars returneras ett felkod utan skrivningar
+
+**Fas 2 — avgör selections:**
+- Hämtar alla `bet_slip_selections` med `status = 'open'` och tillhörande slip med `status in ('open', 'locked')` för given match
+- `status = 'void'` → selection → 'void'
+- `outcome = faktiskt_utfall` → selection → 'won'
+- övriga → selection → 'lost'
+
+**Fas 3 — avgör slip:**
+För varje unikt slip som påverkades i fas 2:
+1. Kontrollera om ALLA selections i slipet är beslutade (`status != 'open'`)
+   - Om nej → hoppa över (annan match i slipet inte klar än)
+2. Lås slip med `FOR UPDATE` och re-kontrollera `status in ('open','locked')` (idempotency guard)
+3. Lås member-raden för wallet-mutation
+4. Avgör slutstatus:
+
+| Condition | Slip-status | Wallet-åtgärd |
+|---|---|---|
+| Alla selections 'void' | `void` | +stake (bet_refund) |
+| Minst en selection 'lost' | `lost` | ingen utbetalning |
+| Alla icke-void 'won' | `won` | +floor(stake × final_odds) (bet_payout) |
+
+`final_odds` = `EXP(SUM(LN(odds_snapshot)))` för alla 'won' selections — standardtrick för SQL-produkt.
+
+**Returnerar:**
+```json
+{
+  "ok": true,
+  "match_status": "finished",
+  "outcome": "home",
+  "selections_settled": 15,
+  "slips_won": 3,
+  "slips_lost": 8,
+  "slips_void": 0,
+  "total_payout": 4200
+}
+```
+
+### Idempotens
+
+- Fas 2 selekterar `bss.status = 'open'` — redan avgjorda selections hoppas över automatiskt
+- Fas 3 selekterar `bs.status in ('open', 'locked')` — redan avgjorda slip finns inte i loopen
+- FOR UPDATE + status-recheck inuti loopen: om två transactions råkar köra Fas 3 parallellt på samma slip vinner den som får låset; den andra ser `status != 'open'` och hoppar över
+- Dubbel utbetalning är omöjlig — ledgern och wallet uppdateras i samma transaktion som status sätts
+
+### Flöde för admin
+
+1. Admin sätter matchresultat via "Matchresultat"-formuläret i adminpanelen
+2. Admin väljer matchen i "Settlement"-sektionen → trycker "Avgör slip"
+3. `settleMatchAction(matchId)` → `settleMatch(matchId)` → `settle_match` RPC (service_role)
+4. Panelen visar: hur många selections avgjordes, slip vann/förlorade/void, total utbetalning
+5. Händelsen loggas i `audit_log` (action = `match_settlement`)
+
+### TypeScript-lager
+
+| Fil | Roll |
+|---|---|
+| `src/lib/betting/settle-match.ts` | `settleMatch(matchId)` — anropar RPC via admin-klient |
+| `src/app/(app)/admin/actions.ts` | `settleMatchAction(matchId)` — verifierar admin, anropar settleMatch, audit-logg |
+| `src/app/(app)/admin/_components/SettlePanel.tsx` | Admin-UI: välj match, trigga, visa detaljerat resultat |

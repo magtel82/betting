@@ -129,6 +129,9 @@ export interface BetSlip {
   placed_at:        string;
   locked_at:        string | null;
   settled_at:       string | null;
+  // Void-adjusted odds used for payout/statistics. Null until settled.
+  // Equals combined_odds when no selections were voided; lower when voids removed.
+  final_odds:       number | null;
   created_at:       string;
   updated_at:       string;
 }

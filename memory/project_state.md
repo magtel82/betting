@@ -4,7 +4,7 @@ description: Aktuell fas och vad som är byggt i VM Bet 2026
 type: project
 ---
 
-Fas 5D klar (2026-04-23). Nästa = fas 6A (settlement) eller commit/push av fas 5.
+Fas 6A klar (2026-04-23). Nästa = fas 6B (inaktivitetsavgift + bonus) eller dashboard.
 
 **Why:** Privat betting-app för ett grabbgäng inför VM 2026. Next.js 16 + Supabase + Vercel.
 
@@ -21,11 +21,12 @@ Fas 5D klar (2026-04-23). Nästa = fas 6A (settlement) eller commit/push av fas 
 - **Fas 5A:** Datamodell + serverlogik — bet_slips, bet_slip_selections, match_wallet_transactions, place_bet_slip RPC, placeSlip() + placeSlipAction()
 - **Fas 5B:** /bet UI — MatchBetCard (H/X/B-knappar), SlipPanel (sticky drawer), BetPage (state), odds_changed-flöde
 - **Fas 5C:** /mina-bet — SlipCard, SlipsView (Mina/Alla-tabs), UX-fix i BetPage, odds-förklaring
-- **Fas 5D:** Ändra/ta bort slip — cancel_bet_slip + amend_bet_slip RPC, deleteSlipAction, amendSlipAction, /bet?amend=<id>, inline confirm i SlipCard
+- **Fas 5D:** Ändra/ta bort slip — cancel_bet_slip + amend_bet_slip RPC, deleteSlipAction, amendSlipAction, /bet?amend=<id>
+- **Fas 6A:** Settlement — settle_match RPC (idempotent, void-hantering, final_odds), SettlePanel i admin
 
 ## Nästa steg
 
-- Fas 6A: Settlement — markera selections won/lost, utbetala, idempotent
 - Fas 6B: Inaktivitetsavgift + gruppbonus
-- Dashboard (/) — topplista-snabbvy, wallet, senaste händelser
-- Slip-låsning när match startar (cron eller del av resultat-sync)
+- Dashboard (/) — topplista, wallet, senaste händelser
+- Slip-låsning (cron: scheduled → locked när match startar)
+- /stallning (topplista + statistik)

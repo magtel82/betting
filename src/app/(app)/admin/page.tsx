@@ -8,6 +8,7 @@ import { AuditLogSection } from "./_components/AuditLogSection";
 import { MatchOddsForm } from "./_components/MatchOddsForm";
 import { MatchResultForm } from "./_components/MatchResultForm";
 import { SyncPanel } from "./_components/SyncPanel";
+import { SettlePanel } from "./_components/SettlePanel";
 import type {
   League,
   Tournament,
@@ -22,7 +23,7 @@ export default async function AdminPage() {
   const { supabase, user, member } = await requireAdmin();
   const leagueId = member.league_id;
 
-  const [membersRes, whitelistRes, leagueRes, auditRes, matchesRes] =
+  const [membersRes, whitelistRes, leagueRes, auditRes, matchesRes, settleMatchesRes] =
     await Promise.all([
       supabase
         .from("league_members")
@@ -43,7 +44,7 @@ export default async function AdminPage() {
         .select("*, actor:profiles(display_name)")
         .order("created_at", { ascending: false })
         .limit(50),
-      // Fetch all non-void matches with teams and current odds
+      // Scheduled/live/finished matches for odds + result forms
       supabase
         .from("matches")
         .select(
@@ -51,6 +52,15 @@ export default async function AdminPage() {
         )
         .neq("status", "void")
         .order("scheduled_at"),
+      // Finished + void matches for settlement panel
+      supabase
+        .from("matches")
+        .select(
+          "*, home_team:teams!matches_home_team_id_fkey(*), away_team:teams!matches_away_team_id_fkey(*)"
+        )
+        .in("status", ["finished", "void"])
+        .order("scheduled_at", { ascending: false })
+        .limit(30),
     ]);
 
   const members = (membersRes.data ?? []) as LeagueMemberWithProfile[];
@@ -70,6 +80,8 @@ export default async function AdminPage() {
     ...m,
     odds: Array.isArray(m.odds) ? (m.odds[0] ?? null) : m.odds,
   }));
+
+  const settleMatches = (settleMatchesRes.data ?? []) as MatchWithTeams[];
 
   if (!leagueWithTournament) {
     return (
@@ -94,6 +106,11 @@ export default async function AdminPage() {
 
         {/* Manuell sync */}
         <SyncPanel />
+
+        {/* Settlement */}
+        {settleMatches.length > 0 && (
+          <SettlePanel matches={settleMatches} />
+        )}
 
         {/* Matchodds – manuell fallback */}
         {matchesWithOdds.length > 0 && (

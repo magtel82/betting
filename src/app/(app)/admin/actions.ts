@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncOdds } from "@/lib/sync/odds";
 import { syncResults } from "@/lib/sync/results";
+import { settleMatch, type SettleMatchResult } from "@/lib/betting/settle-match";
 import type { TournamentStatus, MatchStatus } from "@/types";
 
 export type ActionState = { error: string } | { success: string } | null;
@@ -462,4 +463,34 @@ export async function correctMatchResult(
   revalidatePath("/admin");
   revalidatePath("/matcher");
   return { success: `Resultat uppdaterat för match #${match.match_number}` };
+}
+
+// ─── Settle match slips ───────────────────────────────────────────────────────
+// Triggers settlement for all open/locked slips that contain a selection on
+// the given match. Safe to call multiple times — already settled slips are
+// skipped. Only callable by authenticated admins (checked here), and the
+// underlying RPC is only executable by service_role.
+
+export async function settleMatchAction(matchId: string): Promise<SettleMatchResult> {
+  const ctx = await getAdminContext();
+  if (!ctx) {
+    return { ok: false, code: "unauthorized", error: "Ingen behörighet" };
+  }
+
+  const result = await settleMatch(matchId);
+
+  if (result.ok) {
+    const { slipsWon, slipsLost, slipsVoid, totalPayout, selectionsSettled } = result;
+    await writeAuditLog(ctx.supabase, ctx.user.id, "match_settlement", "matches", matchId, {
+      slips_won:           slipsWon,
+      slips_lost:          slipsLost,
+      slips_void:          slipsVoid,
+      total_payout:        totalPayout,
+      selections_settled:  selectionsSettled,
+    });
+    revalidatePath("/admin");
+    revalidatePath("/mina-bet");
+  }
+
+  return result;
 }
