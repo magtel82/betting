@@ -9,7 +9,7 @@ import { settleMatch, type SettleMatchResult }     from "@/lib/betting/settle-ma
 import { lockStartedSlips, type LockSlipsResult }   from "@/lib/betting/lock-slips";
 import { applyInactivityFee, type ApplyInactivityFeeResult } from "@/lib/betting/inactivity-fee";
 import { applyGroupBonus, type GroupBonusResult }   from "@/lib/betting/group-bonus";
-import type { TournamentStatus, MatchStatus } from "@/types";
+import type { TournamentStatus, MatchStatus, SpecialMarketType } from "@/types";
 
 export type ActionState = { error: string } | { success: string } | null;
 
@@ -558,4 +558,67 @@ export async function applyGroupBonusAction(): Promise<GroupBonusResult> {
   }
 
   return result;
+}
+
+// ─── Set special market odds ──────────────────────────────────────────────────
+// Upserts the odds for vm_vinnare or skyttekung in special_markets.
+// Not allowed for sverige_mal — that market uses a fixed 4x payout factor.
+// Old special_bets versions are NOT modified; their odds_snapshot is locked
+// at placement time. Only new bets placed after this call will use the new odds.
+
+const SPECIAL_MARKET_LABELS: Record<SpecialMarketType, string> = {
+  vm_vinnare:  "VM-vinnare",
+  skyttekung:  "Bästa målskytt",
+  sverige_mal: "Sveriges mål i gruppspelet",
+};
+
+export async function setSpecialOddsAction(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const ctx = await getAdminContext();
+  if (!ctx) return { error: "Ingen behörighet" };
+
+  const type         = formData.get("market_type") as SpecialMarketType | null;
+  const tournamentId = (formData.get("tournament_id") as string | null)?.trim();
+  const oddsRaw      = formData.get("odds") as string | null;
+
+  if (!type || !["vm_vinnare", "skyttekung"].includes(type)) {
+    return { error: "Ogiltig marknad — odds kan inte sättas för den här typen" };
+  }
+  if (!tournamentId) return { error: "Turnering saknas" };
+  if (!oddsRaw)      return { error: "Odds måste fyllas i" };
+
+  const odds = parseFloat(oddsRaw);
+  if (isNaN(odds) || odds <= 1.0) {
+    return { error: "Odds måste vara ett tal större än 1.0" };
+  }
+
+  const { error } = await ctx.supabase
+    .from("special_markets")
+    .upsert(
+      {
+        tournament_id:       tournamentId,
+        type,
+        label:               SPECIAL_MARKET_LABELS[type],
+        odds,
+        fixed_payout_factor: null,
+        set_by:              ctx.user.id,
+      },
+      { onConflict: "tournament_id,type" }
+    );
+
+  if (error) return { error: "Kunde inte spara odds" };
+
+  await writeAuditLog(
+    ctx.supabase,
+    ctx.user.id,
+    "special_odds_set",
+    "special_markets",
+    null,
+    { type, tournament_id: tournamentId, odds }
+  );
+
+  revalidatePath("/admin");
+  return { success: `Odds för ${SPECIAL_MARKET_LABELS[type]} satta till ${odds}` };
 }

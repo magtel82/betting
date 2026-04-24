@@ -10,6 +10,11 @@ export type BetStatus        = "open" | "won" | "lost" | "void" | "cancelled";
 export type BetOutcome       = "home" | "draw" | "away";
 export type WalletTxType     = "bet_stake" | "bet_payout" | "bet_refund" | "inactivity_fee" | "group_bonus" | "admin_adjust";
 
+// ─── Specialbets ──────────────────────────────────────────────────────────────
+export type SpecialMarketType    = "vm_vinnare" | "skyttekung" | "sverige_mal";
+export type SpecialBetStatus     = "active" | "superseded" | "cancelled";
+export type SpecialWalletTxType  = "special_stake" | "special_payout" | "special_refund" | "admin_adjust";
+
 // Keep legacy alias
 export type UserRole = LeagueRole;
 
@@ -154,6 +159,46 @@ export interface MatchWalletTransaction {
   type:             WalletTxType;
   slip_id:          string | null;
   fee_date:         string | null; // Swedish calendar date for inactivity_fee / group_bonus
+  created_at:       string;
+}
+
+export interface SpecialMarket {
+  id:                   string;
+  tournament_id:        string;
+  type:                 SpecialMarketType;
+  label:                string;
+  // For vm_vinnare/skyttekung: decimal odds > 1.0, set by admin.
+  // null when not yet set.
+  odds:                 number | null;
+  // For sverige_mal: 4.0 (fixed). null for odds-based markets.
+  fixed_payout_factor:  number | null;
+  set_by:               string | null;
+  created_at:           string;
+  updated_at:           string;
+}
+
+export interface SpecialBet {
+  id:               string;
+  league_member_id: string;
+  market_id:        string;
+  version:          number;
+  selection_text:   string;
+  stake:            number;
+  odds_snapshot:    number;
+  potential_payout: number;
+  status:           SpecialBetStatus;
+  placed_at:        string;
+  settled_at:       string | null;
+  created_at:       string;
+  updated_at:       string;
+}
+
+export interface SpecialWalletTransaction {
+  id:               string;
+  league_member_id: string;
+  amount:           number;
+  type:             SpecialWalletTxType;
+  special_bet_id:   string | null;
   created_at:       string;
 }
 

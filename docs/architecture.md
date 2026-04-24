@@ -85,8 +85,10 @@ public/
 - `bet_slip_selections` — ett rad per match i slipet; odds_snapshot lagras och ändras aldrig
 - `match_wallet_transactions` — ledger för match_wallet-rörelser; möjliggör idempotent settlement
 
-### Framtida tabeller (fas 7)
-- `special_bets` — specialbets (versionsbaserade)
+### Specialbets (fas 7A)
+- `special_markets` — en marknad per typ per turnering; adminodds upserteras här
+- `special_bets` — versionsbaserade spelarbets; varje ändring skapar ny rad
+- `special_wallet_transactions` — ledger för special_wallet-rörelser
 
 ## Auth-modell
 
@@ -145,6 +147,9 @@ Constraints i databasen garanterar att ingen wallet hamnar under 0.
 | `bet_slips` | alla ligamedlemmar (samma liga) / admin | via RPC `place_bet_slip` / admin |
 | `bet_slip_selections` | alla ligamedlemmar (samma liga) / admin | via RPC `place_bet_slip` / admin |
 | `match_wallet_transactions` | egna rader / admin | via RPC `place_bet_slip` / admin |
+| `special_markets` | alla autentiserade | admin |
+| `special_bets` | egna rader / admin | via RPC (fas 7B) / admin |
+| `special_wallet_transactions` | egna rader / admin | via RPC (fas 7B) / admin |
 
 Admin = `league_members.role = 'admin'` i minst en liga.
 
@@ -666,5 +671,152 @@ rank() over (
 | `src/lib/betting/group-bonus.ts` | `applyGroupBonus(leagueId)` |
 | `src/app/(app)/admin/actions.ts` | `lockSlipsAction`, `applyInactivityFeeAction`, `applyGroupBonusAction` |
 | `src/app/(app)/admin/_components/EconomyPanel.tsx` | Admin-UI med tre sektioner |
+
+## Specialbets — datamodell och adminodds (fas 7A)
+
+### Tabeller
+
+| Tabell | Syfte | Nyckelkolumner |
+|---|---|---|
+| `special_markets` | En marknad per typ per turnering. Adminodds upserteras här. | `tournament_id`, `type`, `odds`, `fixed_payout_factor`, `set_by` |
+| `special_bets` | Versionsbaserade spelarbets. Varje ändring skapar ny rad. | `league_member_id`, `market_id`, `version`, `selection_text`, `stake`, `odds_snapshot`, `status` |
+| `special_wallet_transactions` | Ledger för special_wallet-rörelser | `league_member_id`, `amount`, `type`, `special_bet_id` |
+
+### Marknadstyper
+
+| Typ | Label | Odds-modell |
+|---|---|---|
+| `vm_vinnare` | VM-vinnare | Admin sätter decimal odds > 1.0 |
+| `skyttekung` | Bästa målskytt | Admin sätter decimal odds > 1.0 |
+| `sverige_mal` | Sveriges mål i gruppspelet | Fast `fixed_payout_factor = 4.0` — ingen adminodds |
+
+### Versioneringsmodell
+
+Varje ändring av ett specialbet skapar en ny rad i `special_bets`:
+1. Gammal rad: `status = 'superseded'`
+2. Ny rad: `status = 'active'`, `version = förra + 1`, `odds_snapshot = aktuellt marknadspris`
+
+Partial unique index garanterar exakt ett `active` bet per `(league_member_id, market_id)`.
+
+Historiska versioner (superseded) bevaras för audit — de ändras aldrig.
+
+**Avbokning:** `status = 'cancelled'`, `special_wallet` återbetalas, ledgerpost med `special_refund`.
+
+### Odds-snapshots
+
+- Spelarens `odds_snapshot` låses vid placering: adminodds läses från `special_markets.odds` (eller `fixed_payout_factor` för `sverige_mal`) i samma transaktion.
+- Admin kan ändra `special_markets.odds` fritt fram till deadline — det påverkar bara framtida bets, inte befintliga.
+- `potential_payout = floor(stake × odds_snapshot)` beräknas och lagras vid placering.
+
+### RLS-modell
+
+| Tabell | Läs | Skriv |
+|---|---|---|
+| `special_markets` | alla autentiserade | admin |
+| `special_bets` | egna rader / admin | via RPC (fas 7B) / admin |
+| `special_wallet_transactions` | egna rader / admin | via RPC (fas 7B) / admin |
+
+Synlighet efter deadline (alla ser andras bets) enforças i applikationslagret (fas 7B).
+
+### Adminodds — admin-UI
+
+Admin sätter odds för `vm_vinnare` och `skyttekung` via `SpecialOddsForm` i `/admin`.
+
+**Server action:** `setSpecialOddsAction()` i `src/app/(app)/admin/actions.ts`  
+- Validerar typ (bara `vm_vinnare`/`skyttekung` — `sverige_mal` är fast)
+- Validerar odds > 1.0
+- Upsertar `special_markets`-raden med `onConflict: "tournament_id,type"`
+- Loggar till `audit_log` med action `special_odds_set`
+
+**Komponent:** `src/app/(app)/admin/_components/SpecialOddsForm.tsx`
+- Visar nuvarande odds och senast ändrat per marknad
+- Formulär per marknad med live feedback
+- `sverige_mal` visas som informationsrad (ej redigerbar)
+
+### Wallet-ledger för special_wallet
+
+Speglar `match_wallet_transactions` men för `special_wallet`.
+
+**Transaktionstyper:**
+- `special_stake` — insats debiteras vid placering
+- `special_payout` — utbetalning krediteras vid vinst (fas 7C settlement)
+- `special_refund` — återbetalning vid avbokning/ändring
+- `admin_adjust` — manuell adminjustering
+
+**Vid ändring (amendment):** Två ledgerposter skapas i samma transaktion:
+1. `special_refund` (+old_stake, refererar gamla bet-raden)
+2. `special_stake` (-new_stake, refererar nya bet-raden)
+
+### Serverlogik — placement och cancellation (fas 7B.1)
+
+#### `place_special_bet(p_member_id, p_market_id, p_selection_text, p_stake, p_odds_snapshot)` — RPC
+
+SECURITY DEFINER. Körs i en enda DB-transaktion. Steg i ordning:
+
+1. `SELECT ... FOR UPDATE` på `league_members` — låser balansen mot samtida race
+2. Verifiera att `auth.uid()` äger member-raden
+3. Verifiera att ligan är öppen
+4. Kontrollera att `now() < tournaments.special_bets_deadline`
+5. Validera `stake >= 100`
+6. Hämta `special_markets`-raden
+7. **Odds-kontroll (vm_vinnare/skyttekung):** om `market.odds != p_odds_snapshot` → returnera `odds_changed` med `current_odds`; inga skrivningar sker
+8. **sverige_mal:** använda `fixed_payout_factor` direkt — ingen odds-check
+9. `SELECT ... FOR UPDATE` på eventuell befintlig aktiv bet för `(member, market)` — förhindrar concurrent amendments
+10. Beräkna effektivt saldo (wallet + återbetalning om amendment)
+11. Kontrollera att effektivt saldo >= stake
+12. Om amendment: sätt gammal bet → `superseded`
+13. `INSERT` ny bet-rad med `status='active'`, `version = old+1` (eller 1)
+14. `UPDATE league_members: special_wallet = effective_balance - stake`
+15. `INSERT` ledgerposter: `special_refund` (om amendment) + `special_stake`
+16. Returnera `{ ok, special_bet_id, version, odds_snapshot, potential_payout }`
+
+**Felkoder från RPC:**
+
+| Kod | Betydelse |
+|---|---|
+| `unauthorized` | auth.uid() äger inte member-raden |
+| `member_not_found` | Inaktivt eller okänt ligamedlemskap |
+| `league_closed` | `leagues.is_open = false` |
+| `deadline_passed` | `now() >= special_bets_deadline` |
+| `stake_too_low` | stake < 100 |
+| `insufficient_balance` | Effektivt saldo < stake |
+| `market_not_found` | Marknaden finns inte |
+| `no_odds` | `special_markets.odds` är null (admin ej satt ännu) |
+| `odds_changed` | Odds ändrats sedan klienten laddade sidan — `current_odds` skickas med |
+
+#### `cancel_special_bet(p_bet_id)` — RPC
+
+SECURITY DEFINER. Steg:
+1. `SELECT ... FOR UPDATE` på bet + member
+2. Verifiera ägande via `auth.uid()`
+3. Verifiera `status = 'active'`
+4. Kontrollera deadline
+5. Sätt `status = 'cancelled'`
+6. `special_wallet += stake`
+7. `INSERT special_refund`-ledgerpost
+
+### TypeScript-lager (fas 7A + 7B.1)
+
+| Fil | Roll |
+|---|---|
+| `src/app/(app)/admin/actions.ts` | `setSpecialOddsAction()` — sätter adminodds för vm_vinnare/skyttekung |
+| `src/app/(app)/admin/_components/SpecialOddsForm.tsx` | Admin-UI för specialodds |
+| `src/lib/betting/place-special-bet.ts` | `placeSpecialBet()` / `cancelSpecialBet()` — anropar RPCer via user-klient |
+
+### Enums (Postgres + TypeScript)
+
+| Enum | Värden |
+|---|---|
+| `special_market_type` | `vm_vinnare`, `skyttekung`, `sverige_mal` |
+| `special_bet_status` | `active`, `superseded`, `cancelled` |
+| `special_wallet_tx_type` | `special_stake`, `special_payout`, `special_refund`, `admin_adjust` |
+
+### Seed-data
+
+`supabase/seed/05_special_markets.sql` initierar tre marknader för VM 2026-turneringen:
+- `vm_vinnare` och `skyttekung` med `odds = null` (sätts av admin)
+- `sverige_mal` med `fixed_payout_factor = 4.0`
+
+Seed körs via `seed.sql` och är idempotent (`ON CONFLICT DO NOTHING`).
 
 Alla RPCer anropas via service_role (admin verifieras i TypeScript-lagret). EXECUTE revokad från `public`.

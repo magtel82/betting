@@ -10,6 +10,7 @@ import { MatchResultForm } from "./_components/MatchResultForm";
 import { SyncPanel } from "./_components/SyncPanel";
 import { SettlePanel } from "./_components/SettlePanel";
 import { EconomyPanel } from "./_components/EconomyPanel";
+import { SpecialOddsForm } from "./_components/SpecialOddsForm";
 import type {
   League,
   Tournament,
@@ -18,6 +19,7 @@ import type {
   AuditLog,
   MatchWithTeams,
   MatchOdds,
+  SpecialMarket,
 } from "@/types";
 
 export default async function AdminPage() {
@@ -69,6 +71,17 @@ export default async function AdminPage() {
   const leagueWithTournament = leagueRes.data as
     | (League & { tournament: Tournament })
     | null;
+
+  // Fetch special markets for the tournament (sequential — needs tournament_id)
+  const tournamentId = leagueWithTournament?.tournament.id;
+  const { data: marketsData } = tournamentId
+    ? await supabase
+        .from("special_markets")
+        .select("*")
+        .eq("tournament_id", tournamentId)
+        .order("created_at")
+    : { data: [] };
+  const specialMarkets = (marketsData ?? []) as SpecialMarket[];
   const auditEntries = (auditRes.data ?? []) as (AuditLog & {
     actor: { display_name: string } | null;
   })[];
@@ -121,6 +134,14 @@ export default async function AdminPage() {
 
         {/* Ekonomi: lås slip, inaktivitetsavgift, gruppbonus */}
         <EconomyPanel defaultFeeDate={todaySwedish} />
+
+        {/* Specialbet-odds */}
+        {tournamentId && (
+          <SpecialOddsForm
+            tournamentId={tournamentId}
+            markets={specialMarkets}
+          />
+        )}
 
         {/* Matchodds – manuell fallback */}
         {matchesWithOdds.length > 0 && (
