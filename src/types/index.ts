@@ -12,7 +12,7 @@ export type WalletTxType     = "bet_stake" | "bet_payout" | "bet_refund" | "inac
 
 // ─── Specialbets ──────────────────────────────────────────────────────────────
 export type SpecialMarketType    = "vm_vinnare" | "skyttekung" | "sverige_mal";
-export type SpecialBetStatus     = "active" | "superseded" | "cancelled";
+export type SpecialBetStatus     = "active" | "superseded" | "cancelled" | "won" | "lost";
 export type SpecialWalletTxType  = "special_stake" | "special_payout" | "special_refund" | "admin_adjust";
 
 // Keep legacy alias
@@ -173,6 +173,9 @@ export interface SpecialMarket {
   // For sverige_mal: 4.0 (fixed). null for odds-based markets.
   fixed_payout_factor:  number | null;
   set_by:               string | null;
+  // Settlement result — null until admin runs settlement.
+  result_text:          string | null;
+  settled_at:           string | null;
   created_at:           string;
   updated_at:           string;
 }

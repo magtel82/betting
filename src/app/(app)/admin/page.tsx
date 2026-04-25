@@ -11,6 +11,7 @@ import { SyncPanel } from "./_components/SyncPanel";
 import { SettlePanel } from "./_components/SettlePanel";
 import { EconomyPanel } from "./_components/EconomyPanel";
 import { SpecialOddsForm } from "./_components/SpecialOddsForm";
+import { SpecialSettlePanel, type MarketWithBets } from "./_components/SpecialSettlePanel";
 import type {
   League,
   Tournament,
@@ -72,7 +73,7 @@ export default async function AdminPage() {
     | (League & { tournament: Tournament })
     | null;
 
-  // Fetch special markets for the tournament (sequential — needs tournament_id)
+  // Fetch special markets + active bets for the tournament (sequential — needs tournament_id)
   const tournamentId = leagueWithTournament?.tournament.id;
   const { data: marketsData } = tournamentId
     ? await supabase
@@ -82,6 +83,30 @@ export default async function AdminPage() {
         .order("created_at")
     : { data: [] };
   const specialMarkets = (marketsData ?? []) as SpecialMarket[];
+
+  // Fetch active bets for settlement panel (admin sees all via RLS)
+  const { data: activeBetsData } = specialMarkets.length > 0
+    ? await supabase
+        .from("special_bets")
+        .select("market_id, selection_text")
+        .in("market_id", specialMarkets.map((m) => m.id))
+        .eq("status", "active")
+    : { data: [] };
+
+  // Group active bets by market, then by selection_text with counts
+  const betsByMarket = new Map<string, Map<string, number>>();
+  for (const bet of activeBetsData ?? []) {
+    const selMap = betsByMarket.get(bet.market_id) ?? new Map<string, number>();
+    selMap.set(bet.selection_text, (selMap.get(bet.selection_text) ?? 0) + 1);
+    betsByMarket.set(bet.market_id, selMap);
+  }
+
+  const marketsWithBets: MarketWithBets[] = specialMarkets.map((m) => ({
+    ...m,
+    activeBets: Array.from(betsByMarket.get(m.id)?.entries() ?? [])
+      .map(([selection_text, count]) => ({ selection_text, count }))
+      .sort((a, b) => b.count - a.count),
+  }));
   const auditEntries = (auditRes.data ?? []) as (AuditLog & {
     actor: { display_name: string } | null;
   })[];
@@ -141,6 +166,11 @@ export default async function AdminPage() {
             tournamentId={tournamentId}
             markets={specialMarkets}
           />
+        )}
+
+        {/* Specialbet-settlement */}
+        {marketsWithBets.length > 0 && (
+          <SpecialSettlePanel markets={marketsWithBets} />
         )}
 
         {/* Matchodds – manuell fallback */}

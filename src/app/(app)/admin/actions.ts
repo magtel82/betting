@@ -9,6 +9,7 @@ import { settleMatch, type SettleMatchResult }     from "@/lib/betting/settle-ma
 import { lockStartedSlips, type LockSlipsResult }   from "@/lib/betting/lock-slips";
 import { applyInactivityFee, type ApplyInactivityFeeResult } from "@/lib/betting/inactivity-fee";
 import { applyGroupBonus, type GroupBonusResult }   from "@/lib/betting/group-bonus";
+import { settleSpecialMarket } from "@/lib/betting/settle-special-market";
 import type { TournamentStatus, MatchStatus, SpecialMarketType } from "@/types";
 
 export type ActionState = { error: string } | { success: string } | null;
@@ -621,4 +622,46 @@ export async function setSpecialOddsAction(
 
   revalidatePath("/admin");
   return { success: `Odds för ${SPECIAL_MARKET_LABELS[type]} satta till ${odds}` };
+}
+
+// ─── Settle special market ────────────────────────────────────────────────────
+// Admin declares the winning outcome for a special market. All active bets
+// are resolved: matching bets → won + credited, others → lost.
+// Idempotent: if already settled the RPC returns an error and no writes occur.
+
+export async function settleSpecialMarketAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const ctx = await getAdminContext();
+  if (!ctx) return { error: "Ingen behörighet" };
+
+  const marketId   = (formData.get("market_id")   as string | null)?.trim() ?? "";
+  const resultText = (formData.get("result_text")  as string | null)?.trim() ?? "";
+
+  if (!marketId)   return { error: "Marknad saknas" };
+  if (!resultText) return { error: "Utfallet måste fyllas i" };
+
+  const result = await settleSpecialMarket(marketId, resultText);
+
+  if (!result.ok) {
+    return { error: result.error };
+  }
+
+  const { betsWon, betsLost, totalPaid } = result;
+
+  await writeAuditLog(
+    ctx.supabase,
+    ctx.user.id,
+    "special_market_settlement",
+    "special_markets",
+    marketId,
+    { result_text: resultText, bets_won: betsWon, bets_lost: betsLost, total_paid: totalPaid }
+  );
+
+  revalidatePath("/admin");
+
+  return {
+    success: `Settlement klar: ${betsWon} vann, ${betsLost} förlorade (${totalPaid.toLocaleString("sv-SE")} coins utbetalda)`,
+  };
 }
