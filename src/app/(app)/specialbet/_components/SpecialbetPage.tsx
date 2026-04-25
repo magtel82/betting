@@ -4,7 +4,23 @@ import { useActionState, useState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { placeSpecialBetAction, cancelSpecialBetAction } from "../actions";
 import type { PlaceActionState, CancelActionState } from "../actions";
-import type { SpecialMarket, SpecialBet, SpecialMarketType } from "@/types";
+import type { SpecialMarket, SpecialBet, SpecialMarketType, SpecialBetStatus } from "@/types";
+
+// ─── OtherBetEntry ────────────────────────────────────────────────────────────
+// Shape passed from the server after deadline reveal.
+
+export interface OtherBetEntry {
+  playerName:      string;
+  marketId:        string;
+  marketType:      SpecialMarketType;
+  marketLabel:     string;
+  selectionText:   string;
+  stake:           number;
+  oddsSnapshot:    number;
+  potentialPayout: number;
+  status:          SpecialBetStatus;
+  isFixed:         boolean;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -15,10 +31,10 @@ function fmtCoins(n: number) {
 function fmtDeadline(iso: string) {
   return new Date(iso).toLocaleString("sv-SE", {
     timeZone: "Europe/Stockholm",
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
+    day:      "numeric",
+    month:    "short",
+    hour:     "2-digit",
+    minute:   "2-digit",
   });
 }
 
@@ -34,11 +50,11 @@ function WalletSummary({
   activeBets,
 }: {
   specialWallet: number;
-  activeBets: SpecialBet[];
+  activeBets:    SpecialBet[];
 }) {
-  const placed   = activeBets.reduce((s, b) => s + b.stake, 0);
-  const total    = specialWallet + placed;
-  const pct      = total > 0 ? Math.round((placed / total) * 100) : 0;
+  const placed = activeBets.reduce((s, b) => s + b.stake, 0);
+  const total  = specialWallet + placed;
+  const pct    = total > 0 ? Math.round((placed / total) * 100) : 0;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
@@ -47,7 +63,6 @@ function WalletSummary({
         <p className="text-sm font-semibold text-gray-900">{fmtCoins(total)}</p>
       </div>
 
-      {/* Progress bar */}
       <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
         <div
           className="h-full rounded-full bg-blue-500 transition-all"
@@ -104,7 +119,7 @@ function OddsChangedBanner({
   newOdds,
   onConfirm,
 }: {
-  newOdds: number;
+  newOdds:   number;
   onConfirm: () => void;
 }) {
   return (
@@ -179,8 +194,8 @@ function CurrentBet({
   market,
   isLocked,
 }: {
-  bet: SpecialBet;
-  market: SpecialMarket;
+  bet:      SpecialBet;
+  market:   SpecialMarket;
   isLocked: boolean;
 }) {
   const isFixed = market.type === "sverige_mal";
@@ -223,20 +238,17 @@ function MarketCard({
   isLocked:      boolean;
   specialWallet: number;
 }) {
-  const isFixed = market.type === "sverige_mal";
+  const isFixed  = market.type === "sverige_mal";
   const baseOdds = isFixed
     ? (market.fixed_payout_factor ?? 4.0)
     : (market.odds ?? null);
 
-  // Track confirmed odds (updated after odds_changed confirmation)
   const [oddsToUse, setOddsToUse] = useState<number | null>(baseOdds);
-
   const [state, action] = useActionState<PlaceActionState, FormData>(
     placeSpecialBetAction,
     null,
   );
 
-  // Sync market odds on mount / when market changes
   useEffect(() => {
     setOddsToUse(baseOdds);
   }, [baseOdds]);
@@ -250,27 +262,19 @@ function MarketCard({
     }
   }
 
-  // ── Stake preview ──────────────────────────────────────────────────────────
   const [stakeInput, setStakeInput] = useState("");
-  const stakeNum   = parseInt(stakeInput, 10);
-  const validStake = !isNaN(stakeNum) && stakeNum >= 100;
-  const preview    = validStake && oddsToUse != null
-    ? Math.floor(stakeNum * oddsToUse)
-    : null;
-
-  // ── Max available stake ────────────────────────────────────────────────────
-  // Effective balance = remaining wallet + existing stake being replaced
+  const stakeNum        = parseInt(stakeInput, 10);
+  const validStake      = !isNaN(stakeNum) && stakeNum >= 100;
+  const preview         = validStake && oddsToUse != null ? Math.floor(stakeNum * oddsToUse) : null;
   const effectiveWallet = specialWallet + (activeBet?.stake ?? 0);
 
-  const { title, description, inputLabel, inputPlaceholder } =
-    MARKET_META[market.type];
+  const { title, description, inputLabel, inputPlaceholder } = MARKET_META[market.type];
 
-  const hasNoOdds = !isFixed && baseOdds == null;
+  const hasNoOdds    = !isFixed && baseOdds == null;
   const formDisabled = isLocked || hasNoOdds;
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-      {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-gray-100">
         <h2 className="text-base font-semibold text-gray-900">{title}</h2>
         <p className="mt-0.5 text-xs text-gray-500">{description}</p>
@@ -290,18 +294,15 @@ function MarketCard({
       </div>
 
       <div className="px-4 py-4 space-y-4">
-        {/* Current active bet */}
         {activeBet && (
           <CurrentBet bet={activeBet} market={market} isLocked={isLocked} />
         )}
 
-        {/* Place / amend form */}
         {!formDisabled && (
           <form action={action} className="space-y-4">
             <input type="hidden" name="market_id"     value={market.id} />
             <input type="hidden" name="odds_snapshot" value={oddsToUse ?? ""} />
 
-            {/* Selection */}
             <div className="space-y-1.5">
               <label className="block text-xs font-medium text-gray-700">
                 {inputLabel}
@@ -329,7 +330,6 @@ function MarketCard({
               )}
             </div>
 
-            {/* Stake */}
             <div className="space-y-1.5">
               <div className="flex items-baseline justify-between">
                 <label className="text-xs font-medium text-gray-700">Insats (coins)</label>
@@ -358,7 +358,6 @@ function MarketCard({
               )}
             </div>
 
-            {/* Odds changed banner */}
             {oddsChangedState && (
               <OddsChangedBanner
                 newOdds={oddsChangedState.currentOdds!}
@@ -366,14 +365,12 @@ function MarketCard({
               />
             )}
 
-            {/* Other errors */}
             {state?.ok === false && state.code !== "odds_changed" && (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
                 {state.error}
               </p>
             )}
 
-            {/* Success */}
             {state?.ok === true && (
               <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
                 Bet placerat!
@@ -384,12 +381,105 @@ function MarketCard({
           </form>
         )}
 
-        {/* Locked state message */}
         {isLocked && !activeBet && (
           <p className="text-sm text-gray-400">Inget bet placerat.</p>
         )}
       </div>
     </section>
+  );
+}
+
+// ─── BeforeDeadlineNotice ─────────────────────────────────────────────────────
+
+function BeforeDeadlineNotice() {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-5 text-center space-y-1">
+      <p className="text-sm font-medium text-gray-600">Andras bet syns efter deadline</p>
+      <p className="text-xs text-gray-400">
+        Alla bets låses och visas samtidigt — ingen kan se andras val i förväg.
+      </p>
+    </div>
+  );
+}
+
+// ─── OthersBetRow ─────────────────────────────────────────────────────────────
+
+function OthersBetRow({ entry }: { entry: OtherBetEntry }) {
+  const statusBadge =
+    entry.status === "won"  ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700">Vann</span>  :
+    entry.status === "lost" ? <span className="rounded-full bg-red-100   px-2 py-0.5 text-[11px] font-semibold text-red-700">Förlorade</span> :
+    null;
+
+  return (
+    <div className="flex items-start justify-between gap-3 py-3 border-b border-gray-100 last:border-0">
+      <div className="min-w-0 space-y-0.5">
+        <p className="text-xs font-semibold text-gray-500 truncate">{entry.playerName}</p>
+        <p className="text-sm font-medium text-gray-900 truncate">{entry.selectionText}</p>
+        <p className="text-xs text-gray-500">
+          {fmtCoins(entry.stake)}
+          {entry.isFixed ? (
+            <> · <span className="text-gray-400">4× fast</span> · möjlig vinst <strong className="text-gray-700">{fmtCoins(entry.potentialPayout)}</strong></>
+          ) : (
+            <> · odds <strong className="text-gray-700">{Number(entry.oddsSnapshot).toFixed(2)}</strong> · möjlig vinst <strong className="text-gray-700">{fmtCoins(entry.potentialPayout)}</strong></>
+          )}
+        </p>
+      </div>
+      {statusBadge && <div className="shrink-0 pt-0.5">{statusBadge}</div>}
+    </div>
+  );
+}
+
+// ─── OthersRevealSection ──────────────────────────────────────────────────────
+
+function OthersRevealSection({
+  othersReveal,
+  markets,
+  isAdmin,
+}: {
+  othersReveal: OtherBetEntry[];
+  markets:      SpecialMarket[];
+  isAdmin:      boolean;
+}) {
+  const grouped = MARKET_ORDER
+    .map((type) => {
+      const market = markets.find((m) => m.type === type);
+      if (!market) return null;
+      const entries = othersReveal.filter((b) => b.marketId === market.id);
+      return { type, market, entries };
+    })
+    .filter(Boolean) as { type: SpecialMarketType; market: SpecialMarket; entries: OtherBetEntry[] }[];
+
+  const totalWithBets = othersReveal.length;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold text-gray-700">
+          {isAdmin ? "Alla spelares bet" : "Andras bet"}
+        </h2>
+        {totalWithBets === 0 && (
+          <span className="text-xs text-gray-400">Inga bet placerade av andra</span>
+        )}
+      </div>
+
+      {grouped.map(({ type, market, entries }) => (
+        <section key={market.id} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p className="text-sm font-semibold text-gray-800">{MARKET_META[type].title}</p>
+          </div>
+
+          <div className="px-4">
+            {entries.length === 0 ? (
+              <p className="py-4 text-xs text-gray-400">Inga bet placerade på denna marknad.</p>
+            ) : (
+              entries.map((entry, i) => (
+                <OthersBetRow key={`${entry.playerName}-${i}`} entry={entry} />
+              ))
+            )}
+          </div>
+        </section>
+      ))}
+    </div>
   );
 }
 
@@ -424,13 +514,24 @@ const MARKET_META: Record<
 interface Props {
   specialWallet: number;
   deadline:      string | null;
+  deadlinePassed: boolean;
+  isAdmin:       boolean;
   markets:       SpecialMarket[];
   activeBets:    SpecialBet[];
+  othersReveal:  OtherBetEntry[] | null;
 }
 
 const MARKET_ORDER: SpecialMarketType[] = ["vm_vinnare", "skyttekung", "sverige_mal"];
 
-export function SpecialbetPage({ specialWallet, deadline, markets, activeBets }: Props) {
+export function SpecialbetPage({
+  specialWallet,
+  deadline,
+  deadlinePassed,
+  isAdmin,
+  markets,
+  activeBets,
+  othersReveal,
+}: Props) {
   const isLocked = isDeadlinePassed(deadline);
 
   const marketByType = new Map(markets.map((m) => [m.type, m]));
@@ -461,6 +562,17 @@ export function SpecialbetPage({ specialWallet, deadline, markets, activeBets }:
         <p className="text-sm text-gray-400 text-center py-8">
           Inga specialmarknader är öppna ännu.
         </p>
+      )}
+
+      {/* Reveal section — shown only if deadline passed (or admin). null = before deadline. */}
+      {othersReveal === null ? (
+        deadline && !deadlinePassed && <BeforeDeadlineNotice />
+      ) : (
+        <OthersRevealSection
+          othersReveal={othersReveal}
+          markets={markets}
+          isAdmin={isAdmin}
+        />
       )}
     </div>
   );
