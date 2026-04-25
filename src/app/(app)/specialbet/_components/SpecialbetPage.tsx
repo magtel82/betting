@@ -279,7 +279,7 @@ function MarketCard({
         <h2 className="text-base font-semibold text-gray-900">{title}</h2>
         <p className="mt-0.5 text-xs text-gray-500">{description}</p>
         {isFixed && (
-          <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-purple-50 px-2 py-0.5 text-[11px] font-semibold text-purple-700">
+          <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
             Fast utbetalning: 4× insats
           </p>
         )}

@@ -69,7 +69,7 @@ export default async function GrupperPage() {
 
   return (
     <>
-      <TopBar title="Grupper & slutspel" />
+      <TopBar title="Grupper" />
       <GroupsView
         groups={groups}
         finishedByGroup={finishedByGroup}

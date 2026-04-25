@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { SlipCard, type SlipRow } from "./SlipCard";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -72,7 +73,7 @@ function TabButton({
       onClick={onClick}
       className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
         active
-          ? "bg-blue-600 text-white"
+          ? "bg-gray-900 text-white"
           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
       }`}
     >
@@ -82,13 +83,19 @@ function TabButton({
 }
 
 function EmptyState({ tab }: { tab: "mine" | "all" }) {
+  if (tab === "mine") {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-200 py-12 text-center">
+        <p className="text-sm text-gray-400">Du har inte lagt några slip ännu.</p>
+        <Link href="/bet" className="mt-2 inline-block text-xs font-medium text-gray-900 underline underline-offset-2">
+          Lägg ett slip
+        </Link>
+      </div>
+    );
+  }
   return (
     <div className="py-16 text-center">
-      <p className="text-sm text-gray-400">
-        {tab === "mine"
-          ? "Du har inte lagt några slip ännu."
-          : "Inga slip har lagts i ligan ännu."}
-      </p>
+      <p className="text-sm text-gray-400">Inga slip har lagts i ligan ännu.</p>
     </div>
   );
 }

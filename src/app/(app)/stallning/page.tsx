@@ -209,8 +209,8 @@ export default async function StallningPage() {
     return (
       <>
         <TopBar title="Ställning" />
-        <div className="mx-auto max-w-lg px-4 py-6">
-          <p className="text-gray-500">Du är inte med i någon liga ännu.</p>
+        <div className="mx-auto max-w-lg px-4 py-16 text-center">
+          <p className="text-sm text-gray-400">Du är inte med i någon liga ännu.</p>
         </div>
       </>
     );
@@ -306,7 +306,7 @@ export default async function StallningPage() {
             <h2 className="mb-3 text-sm font-semibold text-gray-500 uppercase tracking-wide">
               Statistik
             </h2>
-            <p className="px-1 text-sm text-gray-400">
+            <p className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-400">
               Statistik visas när det finns avgjorda slip.
             </p>
           </section>

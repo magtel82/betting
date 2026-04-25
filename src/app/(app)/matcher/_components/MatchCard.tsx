@@ -7,26 +7,27 @@ import type { MatchWithTeamsAndOdds, MatchStatus } from "@/types";
 function swTime(utc: string) {
   return new Date(utc).toLocaleTimeString("sv-SE", {
     timeZone: "Europe/Stockholm",
-    hour: "2-digit",
-    minute: "2-digit",
+    hour:     "2-digit",
+    minute:   "2-digit",
   });
 }
 
 const STAGE_LABEL: Record<string, string> = {
-  group:     "Grupp",
-  r32:       "Omgång 32",
-  r16:       "Omgång 16",
-  qf:        "Kvartsfinal",
-  sf:        "Semifinal",
+  group:       "Grupp",
+  r32:         "Omgång 32",
+  r16:         "Omgång 16",
+  qf:          "Kvartsfinal",
+  sf:          "Semifinal",
   "3rd_place": "Bronsmatch",
-  final:     "Final",
+  final:       "Final",
 };
 
-const STATUS_CONFIG: Record<MatchStatus, { label: string; cls: string }> = {
-  scheduled: { label: "Planerad",         cls: "text-gray-400" },
-  live:      { label: "▶ Pågår",          cls: "text-green-600 font-semibold" },
-  finished:  { label: "Avslutad",         cls: "text-gray-400" },
-  void:      { label: "Ogiltigförklarad", cls: "text-red-400" },
+// null label = don't show (scheduled is the default, no badge needed)
+const STATUS_CONFIG: Record<MatchStatus, { label: string | null; cls: string }> = {
+  scheduled: { label: null,            cls: "" },
+  live:      { label: "Pågår",         cls: "text-green-600 font-semibold" },
+  finished:  { label: "Avslutad",      cls: "text-gray-400" },
+  void:      { label: "Ogiltig",       cls: "text-red-500" },
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -47,9 +48,10 @@ interface Props {
 }
 
 export function MatchCard({ match }: Props) {
-  const hasScore  = match.home_score !== null && match.away_score !== null;
-  const isLive    = match.status === "live";
-  const status    = STATUS_CONFIG[match.status];
+  const hasScore   = match.home_score !== null && match.away_score !== null;
+  const isLive     = match.status === "live";
+  const { label: statusLabel, cls: statusCls } = STATUS_CONFIG[match.status];
+
   const stageLabel =
     match.stage === "group" && match.group_letter
       ? `Grupp ${match.group_letter}`
@@ -71,7 +73,14 @@ export function MatchCard({ match }: Props) {
         </span>
         <div className="flex shrink-0 items-center gap-2">
           <span className="text-xs text-gray-500">{swTime(match.scheduled_at)}</span>
-          <span className={`text-xs ${status.cls}`}>{status.label}</span>
+          {statusLabel && (
+            <span className={`flex items-center gap-1 text-xs ${statusCls}`}>
+              {isLive && (
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              )}
+              {statusLabel}
+            </span>
+          )}
         </div>
       </div>
 
@@ -94,7 +103,7 @@ export function MatchCard({ match }: Props) {
             )}
           </div>
         ) : (
-          <span className="shrink-0 text-sm text-gray-400">vs</span>
+          <span className="shrink-0 text-sm text-gray-300">vs</span>
         )}
 
         <TeamCol
@@ -103,7 +112,7 @@ export function MatchCard({ match }: Props) {
         />
       </div>
 
-      {/* Odds + bettability row */}
+      {/* Odds row */}
       {match.odds && (
         <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2">
           <div className="flex gap-4 text-xs text-gray-600">
@@ -121,7 +130,7 @@ export function MatchCard({ match }: Props) {
             </span>
           </div>
           {isBettable && (
-            <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
               Spelbar
             </span>
           )}
@@ -130,9 +139,7 @@ export function MatchCard({ match }: Props) {
 
       {noOdds && (
         <div className="mt-2 border-t border-gray-100 pt-2">
-          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
-            Inga odds — ej spelbar
-          </span>
+          <span className="text-xs text-gray-400">Inga odds</span>
         </div>
       )}
     </div>

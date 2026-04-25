@@ -1,7 +1,7 @@
 import type { TeamStanding } from "@/lib/group-standings";
 
 interface Props {
-  letter:   string;
+  letter:    string;
   standings: TeamStanding[];
 }
 
@@ -19,8 +19,10 @@ export function GroupTable({ letter, standings }: Props) {
 
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
         {/* Header */}
-        <div className="grid items-center border-b border-gray-100 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-400"
-          style={{ gridTemplateColumns: "20px 1fr 28px 28px 28px 28px 36px 28px 32px" }}>
+        <div
+          className="grid items-center border-b border-gray-100 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-400"
+          style={{ gridTemplateColumns: "20px 1fr 28px 28px 28px 28px 36px 28px 32px" }}
+        >
           <span className="text-center">#</span>
           <span>Lag</span>
           <span className="text-center">S</span>
@@ -34,13 +36,22 @@ export function GroupTable({ letter, standings }: Props) {
 
         {/* Rows */}
         {standings.map((s, i) => {
-          const isTop2 = i < 2;
+          const isTop2      = i < 2;
+          // After position 2: slightly more visible cutoff line
+          const borderCls   = i === 1
+            ? "border-b-2 border-blue-100"
+            : i < standings.length - 1
+              ? "border-b border-gray-100"
+              : "";
+          // Non-qualifying rows get a very subtle different background
+          const bgCls       = isTop2 ? "bg-white" : "bg-gray-50/60";
+          // Left accent bar for qualified rows
+          const leftAccent  = isTop2 ? "border-l-2 border-blue-400" : "border-l-2 border-transparent";
+
           return (
             <div
               key={s.teamId}
-              className={`grid items-center px-3 py-2 text-sm tabular-nums ${
-                i < standings.length - 1 ? "border-b border-gray-100" : ""
-              } ${isTop2 ? "bg-white" : "bg-white"}`}
+              className={`grid items-center px-3 py-2 text-sm tabular-nums ${borderCls} ${bgCls} ${leftAccent}`}
               style={{ gridTemplateColumns: "20px 1fr 28px 28px 28px 28px 36px 28px 32px" }}
             >
               {/* Position */}

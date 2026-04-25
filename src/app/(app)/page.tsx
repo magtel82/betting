@@ -42,8 +42,9 @@ export default async function DashboardPage() {
     return (
       <>
         <TopBar title="VM Bet 2026" />
-        <div className="mx-auto max-w-lg px-4 py-6">
-          <p className="text-gray-500">Du är inte med i någon liga ännu.</p>
+        <div className="mx-auto max-w-lg px-4 py-16 text-center">
+          <p className="text-sm text-gray-400">Du är inte med i någon liga ännu.</p>
+          <p className="mt-1 text-xs text-gray-400">Kontakta admin för att bli tillagd.</p>
         </div>
       </>
     );
@@ -130,7 +131,7 @@ export default async function DashboardPage() {
         <section>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-700">Aktiva slip</h2>
-            <Link href="/mina-bet" className="text-xs text-blue-600">
+            <Link href="/mina-bet" className="text-xs font-medium text-gray-500 hover:text-gray-900">
               Visa alla →
             </Link>
           </div>
@@ -140,9 +141,9 @@ export default async function DashboardPage() {
               <p className="text-sm text-gray-400">Inga öppna eller låsta slip</p>
               <Link
                 href="/bet"
-                className="mt-2 inline-block text-xs font-medium text-blue-600"
+                className="mt-2 inline-block text-xs font-medium text-gray-900 underline underline-offset-2"
               >
-                Lägg ett slip →
+                Lägg ett slip
               </Link>
             </div>
           ) : (
@@ -193,22 +194,22 @@ export default async function DashboardPage() {
         <section>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-700">Nästa matcher</h2>
-            <Link href="/matcher" className="text-xs text-blue-600">
+            <Link href="/matcher" className="text-xs font-medium text-gray-500 hover:text-gray-900">
               Alla matcher →
             </Link>
           </div>
 
           {nextMatches.length === 0 ? (
-            <p className="px-1 text-sm text-gray-400">Inga kommande matcher.</p>
+            <p className="rounded-xl border border-dashed border-gray-200 px-4 py-5 text-center text-sm text-gray-400">
+              Inga kommande matcher.
+            </p>
           ) : (
             <div className="space-y-2">
               {nextMatches.map((m, i) => (
                 <Link
                   key={m.id}
                   href="/bet"
-                  className={`flex items-center justify-between rounded-xl border bg-white px-4 py-3 shadow-sm transition-colors hover:bg-gray-50 ${
-                    i === 0 ? "border-blue-200" : "border-gray-100"
-                  }`}
+                  className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-colors hover:bg-gray-50"
                 >
                   <div>
                     <p className="text-sm font-medium text-gray-900">
@@ -218,8 +219,8 @@ export default async function DashboardPage() {
                     <p className="text-xs text-gray-400">{swDateTime(m.scheduled_at)}</p>
                   </div>
                   {i === 0 && (
-                    <span className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-600">
-                      Spela →
+                    <span className="rounded-lg bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
+                      Spela
                     </span>
                   )}
                 </Link>
@@ -233,7 +234,7 @@ export default async function DashboardPage() {
           <section>
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-gray-700">Specialbet</h2>
-              <Link href="/specialbet" className="text-xs text-blue-600">
+              <Link href="/specialbet" className="text-xs font-medium text-gray-500 hover:text-gray-900">
                 Hantera →
               </Link>
             </div>

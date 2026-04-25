@@ -51,12 +51,12 @@ const SLIP_STATUS_CFG: Record<SlipStatus, { label: string; cls: string }> = {
   cancelled: { label: "Annullerad", cls: "bg-gray-100 text-gray-500" },
 };
 
-const BET_STATUS_DOT: Record<BetStatus, string | null> = {
+const BET_STATUS_DOT: Record<BetStatus, { cls: string; label: string } | null> = {
   open:      null,
-  won:       "bg-green-500",
-  lost:      "bg-red-500",
-  void:      "bg-gray-400",
-  cancelled: "bg-gray-400",
+  won:       { cls: "bg-green-500", label: "V" },
+  lost:      { cls: "bg-red-400",   label: "F" },
+  void:      { cls: "bg-gray-300",  label: "O" },
+  cancelled: { cls: "bg-gray-300",  label: "A" },
 };
 
 const OUTCOME_LABEL: Record<BetOutcome, string> = {
@@ -146,7 +146,9 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
             <span className="text-xs text-gray-600 font-medium">{playerName}</span>
           )}
           {isOwn && isModifiable && (
-            <span className="text-[10px] text-gray-400">· ändringsbar</span>
+            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
+              ändringsbar
+            </span>
           )}
         </div>
         <span className="text-xs text-gray-400 tabular-nums">
@@ -164,14 +166,14 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
           const label = match ? stageLabel(match.stage, match.group_letter) : "";
 
           return (
-            <li key={sel.id} className="flex items-center justify-between gap-2 py-2">
+            <li key={sel.id} className="flex items-center justify-between gap-2 py-2.5">
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-gray-900">
                   {home?.flag_emoji} {home?.short_name ?? "?"}&nbsp;–&nbsp;
                   {away?.flag_emoji} {away?.short_name ?? "?"}
                 </p>
                 {label && (
-                  <p className="text-[11px] text-gray-400">{label}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">{label}</p>
                 )}
               </div>
 
@@ -183,7 +185,11 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
                   {sel.odds_snapshot.toFixed(2)}
                 </span>
                 {dot && (
-                  <span className={`inline-block h-2 w-2 rounded-full ${dot}`} aria-hidden />
+                  <span
+                    className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white ${dot.cls}`}
+                    title={dot.label}
+                    aria-hidden
+                  />
                 )}
               </div>
             </li>
