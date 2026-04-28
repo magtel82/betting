@@ -44,25 +44,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // For authenticated users on non-public paths: check profile status
-  if (user && !isPublic(pathname)) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_active")
-      .eq("id", user.id)
-      .single();
-
-    const isActive = profile?.is_active ?? false;
-
-    if (!isActive) {
-      const url = new URL("/login", request.nextUrl.origin);
-      url.searchParams.set("error", "not_invited");
-      return NextResponse.redirect(url);
-    }
-  }
-
-  // Active authenticated user on /login → /
-  if (user && pathname.startsWith("/login")) {
+  // Authenticated user on /login without an error param → redirect to /
+  // (keeps them from seeing login page when already logged in)
+  // If there IS an error param, let the page render so the error is visible.
+  if (user && pathname.startsWith("/login") && !request.nextUrl.searchParams.get("error")) {
     return NextResponse.redirect(new URL("/", request.nextUrl.origin));
   }
 
