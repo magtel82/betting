@@ -44,8 +44,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // For authenticated users: check profile status first
-  if (user) {
+  // For authenticated users on non-public paths: check profile status
+  if (user && !isPublic(pathname)) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("is_active")
@@ -54,23 +54,16 @@ export async function updateSession(request: NextRequest) {
 
     const isActive = profile?.is_active ?? false;
 
-    // Inactive user: stay on /login with error, never redirect to /
     if (!isActive) {
-      if (!pathname.startsWith("/login")) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/login";
-        url.searchParams.set("error", "not_invited");
-        return NextResponse.redirect(url);
-      }
-      return supabaseResponse;
-    }
-
-    // Active user on /login → /
-    if (pathname.startsWith("/login")) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/";
+      const url = new URL("/login", request.nextUrl.origin);
+      url.searchParams.set("error", "not_invited");
       return NextResponse.redirect(url);
     }
+  }
+
+  // Active authenticated user on /login → /
+  if (user && pathname.startsWith("/login")) {
+    return NextResponse.redirect(new URL("/", request.nextUrl.origin));
   }
 
   return supabaseResponse;
