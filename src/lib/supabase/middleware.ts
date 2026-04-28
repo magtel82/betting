@@ -44,25 +44,31 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Authenticated on /login → /
-  if (user && pathname.startsWith("/login")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
-  }
-
-  // Check is_active for authenticated users on protected routes
-  if (user && !isPublic(pathname)) {
+  // For authenticated users: check profile status first
+  if (user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("is_active")
       .eq("id", user.id)
       .single();
 
-    if (profile && !profile.is_active) {
+    const isActive = profile?.is_active ?? false;
+
+    // Inactive user: stay on /login with error, never redirect to /
+    if (!isActive) {
+      if (!pathname.startsWith("/login")) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        url.searchParams.set("error", "not_invited");
+        return NextResponse.redirect(url);
+      }
+      return supabaseResponse;
+    }
+
+    // Active user on /login → /
+    if (pathname.startsWith("/login")) {
       const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("error", "not_invited");
+      url.pathname = "/";
       return NextResponse.redirect(url);
     }
   }
