@@ -1,12 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth/"];
-
-function isPublic(pathname: string) {
-  return PUBLIC_PATHS.some((p) => pathname.startsWith(p));
-}
-
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -31,25 +25,9 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
-
-  // Unauthenticated → /login
-  if (!user && !isPublic(pathname)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
-  }
-
-  // Authenticated user on /login without an error param → redirect to /
-  // (keeps them from seeing login page when already logged in)
-  // If there IS an error param, let the page render so the error is visible.
-  if (user && pathname.startsWith("/login") && !request.nextUrl.searchParams.get("error")) {
-    return NextResponse.redirect(new URL("/", request.nextUrl.origin));
-  }
+  // Refresh session cookies on every request — required by Supabase SSR.
+  // Auth redirects are handled at page level, not here.
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 }
