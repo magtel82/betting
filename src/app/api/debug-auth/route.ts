@@ -9,17 +9,28 @@ export async function GET() {
     return Response.json({ authenticated: false, userError });
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("id, display_name, is_active")
-    .eq("id", user.id)
+  const { data: member, error: memberError } = await supabase
+    .from("league_members")
+    .select("id, match_wallet, is_active, league_id")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .limit(1)
     .single();
 
+  // Try a minimal RPC call to test execute permissions
+  const { data: rpcData, error: rpcError } = member
+    ? await supabase.rpc("place_bet_slip", {
+        p_league_member_id: member.id,
+        p_stake: 10,
+        p_selections: [],
+      })
+    : { data: null, error: null };
+
   return Response.json({
-    authenticated: true,
     userId: user.id,
-    email: user.email,
-    profile,
-    profileError,
+    member,
+    memberError,
+    rpcData,
+    rpcError,
   });
 }
