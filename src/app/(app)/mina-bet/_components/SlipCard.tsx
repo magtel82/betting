@@ -70,12 +70,28 @@ const STAGE_LABEL: Record<string, string> = {
   qf: "QF", sf: "SF", "3rd_place": "Bronsmatch", final: "Final",
 };
 
-function swDateTime(utc: string) {
-  return new Date(utc).toLocaleString("sv-SE", {
+function swDate(utc: string) {
+  return new Date(utc).toLocaleDateString("sv-SE", {
     timeZone: "Europe/Stockholm",
-    day: "numeric", month: "short",
-    hour: "2-digit", minute: "2-digit",
+    day: "numeric",
+    month: "short",
   });
+}
+
+function matchDateRange(selections: SelectionRow[]): string {
+  const timestamps = selections
+    .map((s) => s.match?.scheduled_at)
+    .filter((d): d is string => !!d)
+    .map((d) => new Date(d).getTime());
+
+  if (timestamps.length === 0) return "";
+
+  const minTs = Math.min(...timestamps);
+  const maxTs = Math.max(...timestamps);
+  const minStr = swDate(new Date(minTs).toISOString());
+  const maxStr = swDate(new Date(maxTs).toISOString());
+
+  return minStr === maxStr ? `Match ${minStr}` : `Matcher ${minStr}–${maxStr}`;
 }
 
 function stageLabel(stage: string, groupLetter: string | null) {
@@ -151,8 +167,8 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
             </span>
           )}
         </div>
-        <span className="text-xs text-gray-400 tabular-nums">
-          {swDateTime(slip.placed_at)}
+        <span className="text-xs text-gray-400">
+          {matchDateRange(slip.selections)}
         </span>
       </div>
 

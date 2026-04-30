@@ -308,16 +308,19 @@ function MarketCard({
                 {inputLabel}
               </label>
               {market.type === "sverige_mal" ? (
-                <input
-                  type="number"
-                  name="selection_text"
-                  min={0}
-                  max={40}
-                  step={1}
-                  placeholder={inputPlaceholder}
-                  required
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
-                />
+                <>
+                  <input
+                    type="number"
+                    name="selection_text"
+                    min={0}
+                    max={40}
+                    step={1}
+                    placeholder={inputPlaceholder}
+                    required
+                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
+                  />
+                  <p className="text-xs text-gray-400">(0–12 mål)</p>
+                </>
               ) : (
                 <input
                   type="text"

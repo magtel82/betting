@@ -350,7 +350,7 @@ export function BetPage({
             {/* Instruction */}
             <div className="pb-3">
               <p className="text-xs text-gray-400">
-                Välj 1–5 matcher · max 30 % av saldo per slip
+                Välj 1–5 matcher · max 30% av saldo per slip
               </p>
             </div>
 

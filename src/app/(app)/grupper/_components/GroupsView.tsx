@@ -19,8 +19,9 @@ interface Props {
 
 export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatches }: Props) {
   const availableLetters = ALL_LETTERS.filter((l) => l in groups);
-  const [view,   setView]   = useState<View>("groups");
-  const [active, setActive] = useState<GroupLetter>(availableLetters[0] ?? "A");
+  const [view,    setView]    = useState<View>("groups");
+  const [active,  setActive]  = useState<GroupLetter>(availableLetters[0] ?? "A");
+  const [showAll, setShowAll] = useState(false);
 
   const standings = groups[active] ?? [];
   const finished  = finishedByGroup[active] ?? 0;
@@ -62,16 +63,16 @@ export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatch
             </div>
           ) : (
             <>
-              {/* Group letter selector */}
+              {/* Group letter selector + Visa alla toggle */}
               <div className="sticky top-[57px] z-30 border-b border-gray-200 bg-white">
                 <div className="relative">
                   <div className="flex gap-1.5 overflow-x-auto px-4 py-2 scrollbar-none">
                     {availableLetters.map((letter) => (
                       <button
                         key={letter}
-                        onClick={() => setActive(letter)}
+                        onClick={() => { setActive(letter); setShowAll(false); }}
                         className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                          active === letter
+                          !showAll && active === letter
                             ? "bg-gray-900 text-white"
                             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                         }`}
@@ -79,18 +80,47 @@ export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatch
                         {letter}
                       </button>
                     ))}
+                    <button
+                      onClick={() => setShowAll((v) => !v)}
+                      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                        showAll
+                          ? "bg-gray-900 text-white"
+                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      }`}
+                    >
+                      Alla
+                    </button>
                   </div>
-                  {/* Fade gradient hinting more content to the right */}
                   <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent" />
                 </div>
               </div>
 
-              <div className="mx-auto max-w-lg px-4 py-4 space-y-2">
-                <GroupTable letter={active} standings={standings} />
-                <p className="text-center text-xs text-gray-400">
-                  {finished} av {total} matcher spelade
-                </p>
-              </div>
+              {showAll ? (
+                /* ── Alla grupper: 1 kolumn mobil, 3 kolumner desktop ── */
+                <div className="mx-auto w-full px-4 py-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {availableLetters.map((letter) => (
+                      <div key={letter}>
+                        <GroupTable
+                          letter={letter}
+                          standings={groups[letter] ?? []}
+                        />
+                        <p className="mt-1 text-center text-xs text-gray-400">
+                          {finishedByGroup[letter] ?? 0} av {totalByGroup[letter] ?? 0} matcher
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                /* ── Enskild grupp ── */
+                <div className="mx-auto max-w-lg px-4 py-4 space-y-2">
+                  <GroupTable letter={active} standings={standings} />
+                  <p className="text-center text-xs text-gray-400">
+                    {finished} av {total} matcher spelade
+                  </p>
+                </div>
+              )}
             </>
           )}
         </>

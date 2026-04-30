@@ -8,7 +8,7 @@ type MemberRow = {
   user_id: string;
   match_wallet: number;
   special_wallet: number;
-  profile: { display_name: string } | { display_name: string }[] | null;
+  profile: { display_name: string; email: string | null } | { display_name: string; email: string | null }[] | null;
 };
 
 type SlipRow = {
@@ -43,10 +43,11 @@ function buildLeaderboard(members: MemberRow[], slips: SlipRow[]): LeaderboardEn
   const entries = members.map((m) => {
     const won = wonByMember.get(m.id) ?? [];
     const profile = Array.isArray(m.profile) ? (m.profile[0] ?? null) : m.profile;
+    const emailPrefix = profile?.email?.split("@")[0];
     return {
       memberId: m.id,
       userId: m.user_id,
-      name: profile?.display_name ?? "Okänd",
+      name: profile?.display_name ?? emailPrefix ?? "Okänd",
       totalCoins: m.match_wallet + m.special_wallet,
       // Tie-breaker 1: highest final_odds on a single winning slip
       bestOdds: won.reduce((max, s) => Math.max(max, s.final_odds ?? s.combined_odds), 0),
@@ -108,7 +109,8 @@ function computeStats(members: MemberRow[], slips: SlipRow[]): Stats {
 
   for (const m of members) {
     const profile = Array.isArray(m.profile) ? (m.profile[0] ?? null) : m.profile;
-    const name = profile?.display_name ?? "Okänd";
+    const emailPrefix = profile?.email?.split("@")[0];
+    const name = profile?.display_name ?? emailPrefix ?? "Okänd";
 
     // Sort by settled_at for streak calculation
     const settled = (byMember.get(m.id) ?? []).sort((a, b) =>
@@ -219,7 +221,7 @@ export default async function StallningPage() {
   // All active members in the same league
   const { data: rawMembers } = await supabase
     .from("league_members")
-    .select("id, user_id, match_wallet, special_wallet, profile:profiles(display_name)")
+    .select("id, user_id, match_wallet, special_wallet, profile:profiles(display_name, email)")
     .eq("league_id", member.league_id as string)
     .eq("is_active", true);
 
@@ -319,17 +321,8 @@ export default async function StallningPage() {
           </div>
         </section>
 
-        {/* ── Statistik ─────────────────────────────────────────────────────── */}
-        {!hasStats ? (
-          <section>
-            <h2 className="mb-3 text-sm font-semibold text-gray-500 uppercase tracking-wide">
-              Statistik
-            </h2>
-            <p className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-400">
-              Statistik visas när det finns avgjorda slip.
-            </p>
-          </section>
-        ) : (
+        {/* ── Statistik — döljs helt tills det finns avgjorda slip ─────────── */}
+        {hasStats && (
           <>
             {/* Heder */}
             <section>
