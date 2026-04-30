@@ -16,8 +16,9 @@ function swDateTime(utc: string) {
 type NextMatch = {
   id: string;
   scheduled_at: string;
-  home_team: { short_name: string; flag_emoji: string | null } | null;
-  away_team: { short_name: string; flag_emoji: string | null } | null;
+  home_team: { name: string; flag_emoji: string | null } | null;
+  away_team: { name: string; flag_emoji: string | null } | null;
+  odds: { home_odds: number; draw_odds: number; away_odds: number }[] | null;
 };
 
 type ActiveSlip = {
@@ -68,7 +69,7 @@ export default async function DashboardPage() {
     supabase
       .from("matches")
       .select(
-        "id, scheduled_at, home_team:teams!matches_home_team_id_fkey(short_name, flag_emoji), away_team:teams!matches_away_team_id_fkey(short_name, flag_emoji)"
+        "id, scheduled_at, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji), odds:match_odds(home_odds, draw_odds, away_odds)"
       )
       .eq("status", "scheduled")
       .order("scheduled_at")
@@ -205,26 +206,39 @@ export default async function DashboardPage() {
             </p>
           ) : (
             <div className="space-y-2">
-              {nextMatches.map((m, i) => (
-                <Link
-                  key={m.id}
-                  href="/bet"
-                  className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-colors hover:bg-gray-50"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {m.home_team?.flag_emoji} {m.home_team?.short_name ?? "?"}&nbsp;–&nbsp;
-                      {m.away_team?.flag_emoji} {m.away_team?.short_name ?? "?"}
-                    </p>
-                    <p className="text-xs text-gray-400">{swDateTime(m.scheduled_at)}</p>
-                  </div>
-                  {i === 0 && (
-                    <span className="rounded-lg bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
-                      Spela
-                    </span>
-                  )}
-                </Link>
-              ))}
+              {nextMatches.map((m) => {
+                const o = Array.isArray(m.odds) ? (m.odds[0] ?? null) : m.odds;
+                return (
+                  <Link
+                    key={m.id}
+                    href="/bet"
+                    className="block rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-colors hover:bg-gray-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-900">
+                        {m.home_team?.flag_emoji} {m.home_team?.name ?? "?"}&nbsp;–&nbsp;
+                        {m.away_team?.flag_emoji} {m.away_team?.name ?? "?"}
+                      </p>
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between">
+                      <p className="text-xs text-gray-400">{swDateTime(m.scheduled_at)}</p>
+                      {o && (
+                        <div className="flex gap-2">
+                          <span className="text-xs text-gray-500">
+                            H <strong className="tabular-nums text-gray-800">{o.home_odds.toFixed(2)}</strong>
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            X <strong className="tabular-nums text-gray-800">{o.draw_odds.toFixed(2)}</strong>
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            B <strong className="tabular-nums text-gray-800">{o.away_odds.toFixed(2)}</strong>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </section>

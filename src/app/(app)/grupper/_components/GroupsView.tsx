@@ -63,20 +63,26 @@ export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatch
           ) : (
             <>
               {/* Group letter selector */}
-              <div className="sticky top-[57px] z-30 flex gap-1.5 overflow-x-auto border-b border-gray-200 bg-white px-4 py-2 scrollbar-none">
-                {availableLetters.map((letter) => (
-                  <button
-                    key={letter}
-                    onClick={() => setActive(letter)}
-                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                      active === letter
-                        ? "bg-gray-900 text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    {letter}
-                  </button>
-                ))}
+              <div className="sticky top-[57px] z-30 border-b border-gray-200 bg-white">
+                <div className="relative">
+                  <div className="flex gap-1.5 overflow-x-auto px-4 py-2 scrollbar-none">
+                    {availableLetters.map((letter) => (
+                      <button
+                        key={letter}
+                        onClick={() => setActive(letter)}
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                          active === letter
+                            ? "bg-gray-900 text-white"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        }`}
+                      >
+                        {letter}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Fade gradient hinting more content to the right */}
+                  <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent" />
+                </div>
               </div>
 
               <div className="mx-auto max-w-lg px-4 py-4 space-y-2">

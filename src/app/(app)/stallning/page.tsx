@@ -239,6 +239,17 @@ export default async function StallningPage() {
 
   const slips = (rawSlips ?? []) as unknown as SlipRow[];
 
+  // My coins delta since yesterday — own transactions only (RLS limits to own rows)
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: myTxData } = member
+    ? await supabase
+        .from("match_wallet_transactions")
+        .select("amount")
+        .eq("league_member_id", member.id)
+        .gte("created_at", yesterday)
+    : { data: [] };
+  const myDelta = (myTxData ?? []).reduce((sum, tx) => sum + (tx.amount as number), 0);
+
   const leaderboard = buildLeaderboard(members, slips);
   const stats = computeStats(members, slips);
   const hasStats = slips.length > 0;
@@ -284,20 +295,28 @@ export default async function StallningPage() {
                   </span>
 
                   {/* Coins */}
-                  <span
-                    className={`tabular-nums text-sm font-semibold ${
-                      isMe ? "text-blue-900" : "text-gray-900"
-                    }`}
-                  >
-                    {entry.totalCoins.toLocaleString("sv-SE")}
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span
+                      className={`tabular-nums text-sm font-semibold ${
+                        isMe ? "text-blue-900" : "text-gray-900"
+                      }`}
+                    >
+                      {entry.totalCoins.toLocaleString("sv-SE")}
+                    </span>
+                    {isMe && myDelta !== 0 && (
+                      <span
+                        className={`tabular-nums text-xs font-medium ${
+                          myDelta > 0 ? "text-green-600" : "text-red-500"
+                        }`}
+                      >
+                        {myDelta > 0 ? "+" : ""}{myDelta.toLocaleString("sv-SE")}
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
-          <p className="mt-1.5 px-1 text-xs text-gray-400">
-            Sortering: coins → bästa slip-odds → vunna slip
-          </p>
         </section>
 
         {/* ── Statistik ─────────────────────────────────────────────────────── */}

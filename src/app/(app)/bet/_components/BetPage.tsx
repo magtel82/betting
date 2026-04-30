@@ -225,162 +225,176 @@ export function BetPage({
 
   const showPanel = selections.length > 0;
 
-  return (
-    <div className={showPanel ? "pb-28" : "pb-6"}>
+  const slipPanelProps = {
+    selections,
+    matchMap,
+    stake,
+    maxStake,
+    stakeError,
+    combinedOdds,
+    potentialPayout,
+    canSubmit,
+    isPending,
+    errorMsg,
+    oddsChangedInfo,
+    isOpen: panelOpen,
+    isAmendMode,
+    onToggleOpen: () => setPanelOpen((o) => !o),
+    onStakeChange: setStake,
+    onRemoveSelection: handleRemove,
+    onClear: handleClear,
+    onSubmit: handleSubmit,
+  };
 
-      {/* ── Amend mode banner ────────────────────────────────────────────── */}
-      {isAmendMode && !successResult && (
-        <div className="mx-auto max-w-lg px-4 pt-3 pb-1">
-          <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
-            <span className="mt-px shrink-0 text-amber-500">✎</span>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-amber-800">Du ändrar ett slip</p>
-              <p className="mt-0.5 text-xs text-amber-700">
-                Det gamla slipet annulleras och insatsen återbetalas när du skickar det nya.
-                Välj matcherna du vill ha, justera insatsen och tryck Ändra slip.
+  return (
+    <div className={showPanel ? "pb-28 lg:pb-6" : "pb-6"}>
+      <div className="mx-auto max-w-[480px] px-4 lg:max-w-[900px]">
+        <div className="lg:flex lg:gap-8 lg:items-start">
+
+          {/* ── Left column ────────────────────────────────────────────── */}
+          <div className="min-w-0 lg:flex-[3]">
+
+            {/* Amend mode banner */}
+            {isAmendMode && !successResult && (
+              <div className="pt-3 pb-1">
+                <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                  <span className="mt-px shrink-0 text-amber-500">✎</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-amber-800">Du ändrar ett slip</p>
+                    <p className="mt-0.5 text-xs text-amber-700">
+                      Det gamla slipet annulleras och insatsen återbetalas när du skickar det nya.
+                      Välj matcherna du vill ha, justera insatsen och tryck Ändra slip.
+                    </p>
+                  </div>
+                  <Link
+                    href="/mina-bet"
+                    className="ml-auto shrink-0 text-xs text-amber-600 underline"
+                  >
+                    Avbryt
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Wallet info */}
+            <div className="py-3">
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span>
+                  Saldo:{" "}
+                  <strong className="text-gray-900">
+                    {matchWallet.toLocaleString("sv-SE")} coins
+                  </strong>
+                </span>
+                {isAmendMode && amendRefund > 0 && (
+                  <>
+                    <span className="text-gray-200">+</span>
+                    <span className="text-amber-600">
+                      återbetalas{" "}
+                      <strong>{amendRefund.toLocaleString("sv-SE")}</strong>
+                    </span>
+                  </>
+                )}
+                <span className="text-gray-200">|</span>
+                <span>
+                  Max insats:{" "}
+                  <strong className={canBet ? "text-gray-900" : "text-red-500"}>
+                    {maxStake.toLocaleString("sv-SE")} coins
+                  </strong>
+                </span>
+              </div>
+              {!canBet && (
+                <p className="mt-1 text-xs text-red-500">
+                  Du behöver minst {MIN_WALLET} coins för att lägga ett slip.
+                </p>
+              )}
+            </div>
+
+            {/* Instruction */}
+            <div className="pb-3">
+              <p className="text-xs text-gray-400">
+                Välj 1–5 matcher · max 30 % av saldo per slip
               </p>
             </div>
-            <Link
-              href="/mina-bet"
-              className="ml-auto shrink-0 text-xs text-amber-600 underline"
-            >
-              Avbryt
-            </Link>
-          </div>
-        </div>
-      )}
 
-      {/* ── Wallet info bar ──────────────────────────────────────────────── */}
-      <div className="mx-auto max-w-lg px-4 py-3">
-        <div className="flex items-center gap-3 text-xs text-gray-500">
-          <span>
-            Saldo:{" "}
-            <strong className="text-gray-900">
-              {matchWallet.toLocaleString("sv-SE")} coins
-            </strong>
-          </span>
-          {isAmendMode && amendRefund > 0 && (
-            <>
-              <span className="text-gray-200">+</span>
-              <span className="text-amber-600">
-                återbetalas{" "}
-                <strong>{amendRefund.toLocaleString("sv-SE")}</strong>
-              </span>
-            </>
-          )}
-          <span className="text-gray-200">|</span>
-          <span>
-            Max insats:{" "}
-            <strong className={canBet ? "text-gray-900" : "text-red-500"}>
-              {maxStake.toLocaleString("sv-SE")} coins
-            </strong>
-          </span>
-        </div>
+            {/* Success banner */}
+            {successResult && (
+              <div className="pb-3">
+                <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+                  <p className="text-sm font-semibold text-green-800">
+                    {successResult.wasAmend ? "Slipet är ändrat!" : "Slipet är placerat!"}
+                  </p>
+                  <p className="mt-1 text-xs text-green-700">
+                    Möjlig vinst:{" "}
+                    <strong>{successResult.potentialPayout.toLocaleString("sv-SE")} coins</strong>
+                    {" "}· Odds: {successResult.combinedOdds.toFixed(2)}x
+                  </p>
+                  <div className="mt-2 flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSuccessResult(null)}
+                      className="text-xs text-green-700 underline"
+                    >
+                      Stäng
+                    </button>
+                    <Link href="/mina-bet" className="text-xs text-green-700 underline">
+                      Se dina slip →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
 
-        {!canBet && (
-          <p className="mt-1 text-xs text-red-500">
-            Du behöver minst {MIN_WALLET} coins för att lägga ett slip.
-          </p>
-        )}
-      </div>
+            {/* Empty state */}
+            {upcomingMatches.length === 0 && (
+              <div className="py-16 text-center">
+                <p className="text-sm text-gray-400">
+                  Inga kommande matcher att spela på just nu.
+                </p>
+              </div>
+            )}
 
-      {/* ── Odds-förklaring ──────────────────────────────────────────────── */}
-      <div className="mx-auto max-w-lg px-4 pb-3">
-        <p className="text-xs text-gray-400">
-          Tryck{" "}
-          <strong className="text-gray-500">H&thinsp;/&thinsp;X&thinsp;/&thinsp;B</strong>{" "}
-          för hemma&thinsp;/&thinsp;oavgjort&thinsp;/&thinsp;borta.
-          Välj 1–5 matcher — oddsen multipliceras i en kombi.{" "}
-          <strong className="text-gray-500">Odds × insats = möjlig vinst.</strong>
-          {" "}Odds visas vid sidladdning — om de ändras innan du skickar ber vi dig bekräfta.
-        </p>
-      </div>
-
-      {/* ── Success banner ───────────────────────────────────────────────── */}
-      {successResult && (
-        <div className="mx-auto max-w-lg px-4 pb-3">
-          <div className="rounded-xl border border-green-200 bg-green-50 p-4">
-            <p className="text-sm font-semibold text-green-800">
-              {successResult.wasAmend ? "Slipet är ändrat!" : "Slipet är placerat!"}
-            </p>
-            <p className="mt-1 text-xs text-green-700">
-              Möjlig vinst:{" "}
-              <strong>{successResult.potentialPayout.toLocaleString("sv-SE")} coins</strong>
-              {" "}· Odds: {successResult.combinedOdds.toFixed(2)}x
-            </p>
-            <div className="mt-2 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setSuccessResult(null)}
-                className="text-xs text-green-700 underline"
-              >
-                Stäng
-              </button>
-              <Link href="/mina-bet" className="text-xs text-green-700 underline">
-                Se dina slip →
-              </Link>
+            {/* Match list grouped by day */}
+            <div className="space-y-6">
+              {dayGroups.map(({ label, matches: dayMatches }) => (
+                <section key={label}>
+                  <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 first-letter:capitalize">
+                    {label}
+                  </h2>
+                  <ul className="space-y-2">
+                    {dayMatches.map((m) => (
+                      <li key={m.id}>
+                        <MatchBetCard
+                          match={m}
+                          selectedOutcome={
+                            selections.find((s) => s.matchId === m.id)?.outcome ?? null
+                          }
+                          onToggle={handleToggle}
+                          isMaxed={selections.length >= MAX_SELS}
+                          oddsChangedMatchId={oddsChangedInfo?.matchId ?? null}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* ── Empty state ──────────────────────────────────────────────────── */}
-      {upcomingMatches.length === 0 && (
-        <div className="mx-auto max-w-lg px-4 py-16 text-center">
-          <p className="text-sm text-gray-400">
-            Inga kommande matcher att spela på just nu.
-          </p>
-        </div>
-      )}
+          {/* ── Right column: desktop slip panel ───────────────────────── */}
+          {showPanel && (
+            <div className="hidden lg:block lg:flex-[2] lg:sticky lg:top-[57px] lg:pt-3">
+              <SlipPanel {...slipPanelProps} isSidebar />
+            </div>
+          )}
 
-      {/* ── Match list grouped by day ─────────────────────────────────────── */}
-      <div className="mx-auto max-w-lg px-4 space-y-6">
-        {dayGroups.map(({ label, matches: dayMatches }) => (
-          <section key={label}>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 first-letter:capitalize">
-              {label}
-            </h2>
-            <ul className="space-y-2">
-              {dayMatches.map((m) => (
-                <li key={m.id}>
-                  <MatchBetCard
-                    match={m}
-                    selectedOutcome={
-                      selections.find((s) => s.matchId === m.id)?.outcome ?? null
-                    }
-                    onToggle={handleToggle}
-                    isMaxed={selections.length >= MAX_SELS}
-                    oddsChangedMatchId={oddsChangedInfo?.matchId ?? null}
-                  />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
+        </div>
       </div>
 
-      {/* ── Slip panel ───────────────────────────────────────────────────── */}
+      {/* Mobile drawer */}
       {showPanel && (
-        <SlipPanel
-          selections={selections}
-          matchMap={matchMap}
-          stake={stake}
-          maxStake={maxStake}
-          stakeError={stakeError}
-          combinedOdds={combinedOdds}
-          potentialPayout={potentialPayout}
-          canSubmit={canSubmit}
-          isPending={isPending}
-          errorMsg={errorMsg}
-          oddsChangedInfo={oddsChangedInfo}
-          isOpen={panelOpen}
-          isAmendMode={isAmendMode}
-          onToggleOpen={() => setPanelOpen((o) => !o)}
-          onStakeChange={setStake}
-          onRemoveSelection={handleRemove}
-          onClear={handleClear}
-          onSubmit={handleSubmit}
-        />
+        <div className="lg:hidden">
+          <SlipPanel {...slipPanelProps} />
+        </div>
       )}
     </div>
   );

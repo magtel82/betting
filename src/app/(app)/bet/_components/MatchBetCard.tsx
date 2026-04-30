@@ -34,12 +34,12 @@ interface OddsButtonProps {
 }
 
 function OddsButton({ label, odds, selected, disabled, onClick, highlight }: OddsButtonProps) {
-  const base    = "flex flex-1 flex-col items-center rounded-lg py-2 px-1 text-xs transition-colors select-none";
+  const base    = "flex flex-1 flex-col items-center justify-center rounded-lg min-h-[64px] px-1 text-xs transition-colors select-none";
   const active  = highlight
     ? "bg-amber-500 text-white font-semibold"
-    : "bg-blue-600 text-white font-semibold";
+    : "bg-gray-900 text-white font-semibold";
   const idle    = "bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300";
-  const off     = "bg-gray-100 text-gray-300 cursor-not-allowed";
+  const off     = "bg-gray-50 text-gray-300 cursor-not-allowed";
 
   return (
     <button
@@ -50,7 +50,7 @@ function OddsButton({ label, odds, selected, disabled, onClick, highlight }: Odd
       className={`${base} ${selected ? active : disabled ? off : idle}`}
     >
       <span className="font-semibold leading-none">{label}</span>
-      <span className={`mt-0.5 tabular-nums text-[11px] ${selected ? "opacity-80" : "text-gray-500"}`}>
+      <span className={`mt-1 tabular-nums text-[12px] font-medium ${selected ? "opacity-75" : "text-gray-500"}`}>
         {odds.toFixed(2)}
       </span>
     </button>
@@ -102,7 +102,7 @@ export function MatchBetCard({
         isChanged
           ? "border-amber-300"
           : isInSlip
-            ? "border-blue-300"
+            ? "border-gray-400"
             : "border-gray-200"
       }`}
     >

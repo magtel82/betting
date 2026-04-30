@@ -43,7 +43,7 @@ export default async function MinaBetPage() {
 
   return (
     <>
-      <TopBar title="Slip" />
+      <TopBar title="Mina bet" />
       <SlipsView slips={slips} currentUserId={user.id} />
     </>
   );
