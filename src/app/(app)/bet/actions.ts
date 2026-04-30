@@ -2,10 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { placeSlip, type SelectionInput, type PlaceSlipResult } from "@/lib/betting/place-slip";
-
-// Re-export types for UI components
-export type { SelectionInput, PlaceSlipResult };
+import { placeSlip } from "@/lib/betting/place-slip";
+import type { SelectionInput, PlaceSlipResult } from "@/lib/betting/place-slip";
 
 // ─── placeSlipAction ─────────────────────────────────────────────────────────
 // Server Action wrapper for placing a new matchslip.
@@ -76,8 +74,9 @@ export async function amendSlipAction(
   });
 
   if (rpcError) {
-    console.error("[amendSlipAction] RPC error:", rpcError);
-    return { ok: false, code: "rpc_error", error: "Internt fel — försök igen" };
+    console.error("[amendSlipAction] RPC error:", rpcError.message, rpcError.code, rpcError.details);
+    const code = rpcError.code ?? "unknown";
+    return { ok: false, code: "rpc_error", error: `Internt fel (${code}) — försök igen` };
   }
 
   const result = rpcData as Record<string, unknown>;

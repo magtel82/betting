@@ -79,11 +79,11 @@ export function SlipPanel({
     onStakeChange(String(next));
   }
 
-  // ── Shared expanded content ───────────────────────────────────────────────
+  // ── Scrollable selections list ────────────────────────────────────────────
+  // Only this part scrolls — stake, payout and buttons stay pinned.
 
-  const expandedContent = (
-    <div className={isSidebar ? "" : "max-h-[68vh] overflow-y-auto border-t border-gray-100"}>
-      {/* Selections list */}
+  const selectionsList = (
+    <div className={`overflow-y-auto border-t border-gray-100 ${isSidebar ? "max-h-[45vh]" : "max-h-[35vh]"}`}>
       <ul className="px-4 pt-3 space-y-2">
         {selections.map((sel) => {
           const match      = matchMap.get(sel.matchId);
@@ -111,7 +111,7 @@ export function SlipPanel({
                     }`}
                   >
                     {isChanged && "→ "}
-                    {sel.oddsSnapshot.toFixed(2)}
+                    {Number(sel.oddsSnapshot).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -131,14 +131,21 @@ export function SlipPanel({
 
       {/* Combined odds */}
       {count > 1 && (
-        <div className="mx-4 mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5">
+        <div className="mx-4 mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5 pb-2">
           <span className="text-xs text-gray-500">Kombinerat odds</span>
           <span className="text-sm font-bold tabular-nums text-gray-900">
             {combinedOdds.toFixed(2)}x
           </span>
         </div>
       )}
+    </div>
+  );
 
+  // ── Non-scrolling stake section ───────────────────────────────────────────
+  // Always fully visible regardless of how many selections are in the list.
+
+  const stakeSection = (
+    <div>
       {/* Stake row */}
       <div className="mx-4 mt-3 border-t border-gray-100 pt-3 space-y-1.5">
         <div className="flex items-center justify-between">
@@ -218,37 +225,42 @@ export function SlipPanel({
         </div>
       )}
 
-      {/* Action buttons */}
-      <div className={`flex gap-2 px-4 pt-3 ${isSidebar ? "pb-4" : "pb-8"}`}>
-        <button
-          type="button"
-          onClick={onClear}
-          className="w-1/3 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 active:bg-gray-100"
-        >
-          Rensa
-        </button>
+      {isSidebar && <div className="pb-2" />}
+    </div>
+  );
 
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={!canSubmit}
-          className={`flex-1 rounded-lg py-2.5 text-sm font-semibold text-white transition-colors ${
-            !canSubmit
-              ? "cursor-not-allowed bg-gray-200 text-gray-400"
-              : hasOddsChanged
-                ? "bg-amber-500 hover:bg-amber-600 active:bg-amber-700"
-                : "bg-gray-900 hover:bg-gray-800 active:bg-gray-700"
-          }`}
-        >
-          {isPending
-            ? (isAmendMode ? "Ändrar…" : "Placerar…")
+  // ── Shared action buttons ─────────────────────────────────────────────────
+
+  const actionButtons = (
+    <div className={`flex gap-2 px-4 pt-3 ${isSidebar ? "pb-4" : "pb-5"} border-t border-gray-100`}>
+      <button
+        type="button"
+        onClick={onClear}
+        className="w-1/3 rounded-lg border border-gray-200 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 active:bg-gray-100"
+      >
+        Rensa
+      </button>
+
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={!canSubmit}
+        className={`flex-1 rounded-lg py-2.5 text-sm font-semibold text-white transition-colors ${
+          !canSubmit
+            ? "cursor-not-allowed bg-gray-200 text-gray-400"
             : hasOddsChanged
-              ? "Bekräfta och skicka"
-              : isAmendMode
-                ? "Ändra slip"
-                : "Lägg slip"}
-        </button>
-      </div>
+              ? "bg-amber-500 hover:bg-amber-600 active:bg-amber-700"
+              : "bg-gray-900 hover:bg-gray-800 active:bg-gray-700"
+        }`}
+      >
+        {isPending
+          ? (isAmendMode ? "Ändrar…" : "Placerar…")
+          : hasOddsChanged
+            ? "Bekräfta och skicka"
+            : isAmendMode
+              ? "Ändra slip"
+              : "Lägg slip"}
+      </button>
     </div>
   );
 
@@ -273,12 +285,18 @@ export function SlipPanel({
             </span>
           )}
         </div>
-        {expandedContent}
+        {selectionsList}
+        {stakeSection}
+        {actionButtons}
       </div>
     );
   }
 
   // ── Drawer mode (mobile) ──────────────────────────────────────────────────
+  // Three layers stacked vertically:
+  //   1. Collapsed bar — always visible, toggles the drawer
+  //   2. Scrollable selections — only the match list scrolls
+  //   3. Stake section + action buttons — always visible at the bottom
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white shadow-xl">
@@ -311,7 +329,13 @@ export function SlipPanel({
         </span>
       </button>
 
-      {isOpen && expandedContent}
+      {isOpen && (
+        <>
+          {selectionsList}
+          {stakeSection}
+          {actionButtons}
+        </>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ description: Aktuell fas och vad som är byggt i VM Bet 2026
 type: project
 ---
 
-Fas 6B klar (2026-04-23). Nästa = dashboard + /stallning eller commit/push.
+Fas 7C klar (2026-04-29). Supabase-projektet fyzdvppcvfaqbzkhvsjr är initierat med alla migrationer och seed-data (full_setup.sql). Appen är redo att köra mot riktig databas.
 
 **Why:** Privat betting-app för ett grabbgäng inför VM 2026. Next.js 16 + Supabase + Vercel.
 
@@ -24,10 +24,14 @@ Fas 6B klar (2026-04-23). Nästa = dashboard + /stallning eller commit/push.
 - **Fas 5D:** Ändra/ta bort slip — cancel_bet_slip + amend_bet_slip RPC, deleteSlipAction, amendSlipAction, /bet?amend=<id>
 - **Fas 6A:** Settlement — settle_match RPC (idempotent, void-hantering, final_odds), SettlePanel i admin
 - **Fas 6B:** Slip-låsning, inaktivitetsavgift, gruppbonus — 3 RPCer + EconomyPanel i admin, fee_date i ledger
+- **Fas 7 (2026-04-30):** Buggfixar — GRANT på betting-RPCer, plånbokskorrektion (5000/1000), SlipPanel-CTA alltid synlig på mobil, sessionStorage för att bevara val vid navigering
+
+## Kända kvarstående punkter
+
+- Grupplottdrag (02_teams.sql): Lagindelningen kan behöva rättas mot officiellt FIFA WC 2026-lottdrag. Strukturen är intern konsistent men okontrollerad mot faktiskt lottdrag (genomfört dec 2025).
+- Manuellt SQL-steg krävs för befintliga members som skapades med fel plånbok: köra migration 0014 i Supabase-dashboarden.
 
 ## Nästa steg
 
-- Dashboard (/) — wallet-saldo, senaste slip-händelser, kommande matcher
-- /stallning — topplista (total_coins) + statistik (ROI, serier)
-- Specialbets (fas 7)
-- Koppla lock_started_slips() till syncResults() för mer automatik
+- Bekräfta att slip kan läggas efter migrationerna (kolla serverloggen för eventuellt kvar-error)
+- Rätta lag/grupper om FIFA-lottdrag avviker från seed

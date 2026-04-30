@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect, useRef } from "react";
 import Link from "next/link";
 import { placeSlipAction, amendSlipAction } from "../actions";
 import { MatchBetCard } from "./MatchBetCard";
 import { SlipPanel, type LocalSelection } from "./SlipPanel";
 import type { MatchWithTeamsAndOdds, BetOutcome } from "@/types";
+
+const SESSION_KEY = "betSlipSelections";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -65,6 +67,9 @@ export function BetPage({
   const [isAmendMode,    setIsAmendMode]   = useState(!!amendSlipId);
   const activeAmendId = isAmendMode ? amendSlipId : undefined;
 
+  // Ref used in effects to access the prop without re-running effects
+  const amendSlipIdRef = useRef(amendSlipId);
+
   // For amend mode: the old stake will be refunded, increasing effective balance.
   const amendRefund = isAmendMode ? (prefilledStake ?? 0) : 0;
   const effectiveWallet = matchWallet + amendRefund;
@@ -85,6 +90,38 @@ export function BetPage({
   const [errorMsg,        setErrorMsg]     = useState<string | null>(null);
   const [oddsChangedInfo, setOddsChanged]  = useState<OddsChangedInfo | null>(null);
   const [successResult,   setSuccessResult]= useState<SuccessResult | null>(null);
+
+  // ── sessionStorage persistence ──────────────────────────────────────────────
+  // Restore selections when the user navigates back to /bet within the same
+  // browser session. Amend-mode uses prefilledSelections and skips this.
+
+  useEffect(() => {
+    if (amendSlipIdRef.current) return; // amend prefill takes precedence
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return;
+      const parsed: LocalSelection[] = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setSelections(parsed);
+        setPanelOpen(true);
+      }
+    } catch {
+      // Ignore parse errors — stale data is discarded
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (isAmendMode) return; // Don't persist amend selections to session
+    try {
+      if (selections.length > 0) {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(selections));
+      } else {
+        sessionStorage.removeItem(SESSION_KEY);
+      }
+    } catch {
+      // sessionStorage may be unavailable in some private-mode browsers
+    }
+  }, [selections, isAmendMode]);
 
   // ── Derived data ────────────────────────────────────────────────────────────
 
@@ -202,6 +239,7 @@ export function BetPage({
         setOddsChanged(null);
         setIsAmendMode(false); // done amending — next submit is a fresh placement
         setPanelOpen(false);
+        try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
       } else if (
         !result.ok &&
         result.code === "odds_changed" &&

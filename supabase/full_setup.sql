@@ -1904,3 +1904,31 @@ values
   ('a1000000-0000-0000-0000-000000000001', 'skyttekung',  'Bästa målskytt',             null, null, null),
   ('a1000000-0000-0000-0000-000000000001', 'sverige_mal', 'Sveriges mål i gruppspelet', null, 4.0,  null)
 on conflict (tournament_id, type) do nothing;
+
+
+-- ============================================================
+-- Migration 0013 — Explicit GRANT for user-facing betting RPCs
+-- ============================================================
+
+grant execute on function place_bet_slip(uuid, int, jsonb) to authenticated;
+grant execute on function cancel_bet_slip(uuid)            to authenticated;
+grant execute on function amend_bet_slip(uuid, int, jsonb) to authenticated;
+
+
+-- ============================================================
+-- Migration 0014 — Fix member wallets to correct starting capital
+-- ============================================================
+
+update league_members lm
+set
+  match_wallet   = 5000,
+  special_wallet = 1000
+where
+  (lm.match_wallet != 5000 or lm.special_wallet != 1000)
+  and not exists (
+    select 1 from match_wallet_transactions mwt where mwt.league_member_id = lm.id
+  )
+  and not exists (
+    select 1 from special_bets sb
+    where sb.league_member_id = lm.id and sb.status not in ('cancelled')
+  );

@@ -82,7 +82,10 @@ export async function placeSlip(
     if (!["home", "draw", "away"].includes(sel.outcome)) {
       return { ok: false, code: "invalid_outcome", error: "Ogiltigt utfall" };
     }
-    if (typeof sel.oddsSnapshot !== "number" || sel.oddsSnapshot <= 1) {
+    // Coerce to number — Supabase numeric columns can occasionally arrive as
+    // strings depending on the PostgREST version; Number() handles both safely.
+    const oddsNum = Number(sel.oddsSnapshot);
+    if (!Number.isFinite(oddsNum) || oddsNum <= 1) {
       return { ok: false, code: "invalid_odds", error: "Ogiltiga odds i selection" };
     }
   }
@@ -139,8 +142,9 @@ export async function placeSlip(
   );
 
   if (rpcError) {
-    console.error("[placeSlip] RPC error:", rpcError);
-    return { ok: false, code: "rpc_error", error: "Internt fel — försök igen" };
+    console.error("[placeSlip] RPC error:", rpcError.message, rpcError.code, rpcError.details);
+    const code = rpcError.code ?? "unknown";
+    return { ok: false, code: "rpc_error", error: `Internt fel (${code}) — försök igen` };
   }
 
   const result = rpcData as Record<string, unknown>;
