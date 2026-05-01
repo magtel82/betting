@@ -182,11 +182,11 @@ function computeStats(members: MemberRow[], slips: SlipRow[]): Stats {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function positionColor(pos: number) {
-  if (pos === 1) return "text-yellow-600 font-bold";
-  if (pos === 2) return "text-gray-500 font-semibold";
-  if (pos === 3) return "text-amber-700 font-semibold";
-  return "text-gray-400 font-medium";
+function positionMedal(pos: number): string | null {
+  if (pos === 1) return "🥇";
+  if (pos === 2) return "🥈";
+  if (pos === 3) return "🥉";
+  return null;
 }
 
 function fmtRoi(roi: number) {
@@ -269,49 +269,53 @@ export default async function StallningPage() {
 
           <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
             {leaderboard.map((entry, i) => {
-              const isMe = entry.userId === user.id;
+              const isMe  = entry.userId === user.id;
+              const medal = positionMedal(entry.position);
               return (
                 <div
                   key={entry.memberId}
-                  className={`flex items-center gap-3 px-4 py-3 ${
+                  className={`flex items-center gap-3 px-4 py-3.5 ${
                     i < leaderboard.length - 1 ? "border-b border-gray-50" : ""
-                  } ${isMe ? "bg-blue-50" : ""}`}
+                  } ${isMe ? "bg-[var(--primary-50)] border-l-4 border-l-[var(--primary)]" : ""}`}
                 >
-                  {/* Position */}
-                  <span
-                    className={`w-6 shrink-0 text-center text-sm tabular-nums ${positionColor(entry.position)}`}
-                  >
-                    {entry.position}
+                  {/* Position / medal */}
+                  <span className="grid w-8 shrink-0 place-items-center">
+                    {medal ? (
+                      <span className="text-xl leading-none" aria-hidden>{medal}</span>
+                    ) : (
+                      <span className={`text-sm font-bold tabular-nums ${
+                        isMe ? "text-[var(--primary)]" : "text-gray-400"
+                      }`}>
+                        {entry.position}
+                      </span>
+                    )}
                   </span>
 
                   {/* Name */}
-                  <span
-                    className={`flex-1 truncate text-sm ${
-                      isMe ? "font-semibold text-blue-900" : "text-gray-800"
-                    }`}
-                  >
+                  <span className={`flex-1 truncate text-sm ${
+                    isMe ? "font-bold text-[var(--primary-600)]" : "font-medium text-gray-900"
+                  }`}>
                     {entry.name}
                     {isMe && (
-                      <span className="ml-1.5 text-xs font-normal text-blue-500">du</span>
+                      <span className="ml-1.5 rounded-full bg-[var(--primary)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                        du
+                      </span>
                     )}
                   </span>
 
                   {/* Coins */}
                   <div className="flex flex-col items-end">
-                    <span
-                      className={`tabular-nums text-sm font-semibold ${
-                        isMe ? "text-blue-900" : "text-gray-900"
-                      }`}
-                    >
-                      {entry.totalCoins.toLocaleString("sv-SE")}
+                    <span className={`tabular-nums text-base font-bold ${
+                      isMe ? "text-[var(--primary-600)]" : "text-gray-900"
+                    }`}>
+                      {entry.totalCoins.toLocaleString("sv-SE")}{" "}
+                      <span className="text-xs text-[var(--coin)]">🪙</span>
                     </span>
                     {isMe && myDelta !== 0 && (
-                      <span
-                        className={`tabular-nums text-xs font-medium ${
-                          myDelta > 0 ? "text-green-600" : "text-red-500"
-                        }`}
-                      >
-                        {myDelta > 0 ? "+" : ""}{myDelta.toLocaleString("sv-SE")}
+                      <span className={`tabular-nums text-xs font-semibold ${
+                        myDelta > 0 ? "text-[var(--win)]" : "text-[var(--loss)]"
+                      }`}>
+                        {myDelta > 0 ? "▲ +" : "▼ "}{myDelta.toLocaleString("sv-SE")}
                       </span>
                     )}
                   </div>
@@ -326,15 +330,15 @@ export default async function StallningPage() {
           <>
             {/* Heder */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                Heder
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                <span aria-hidden>🏆</span> Heder
               </h2>
               <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
                 <StatRow
                   label="Bäst ROI"
                   player={stats.bestRoi?.name}
                   value={stats.bestRoi ? fmtRoi(stats.bestRoi.roi) : "–"}
-                  valueColor="text-green-700"
+                  valueColor="text-[var(--win)]"
                 />
                 <StatRow
                   label="Längsta vinnarserie"
@@ -353,7 +357,7 @@ export default async function StallningPage() {
                       ? `+${stats.bestBet.amount.toLocaleString("sv-SE")} (${stats.bestBet.odds.toFixed(2)}x)`
                       : "–"
                   }
-                  valueColor="text-green-700"
+                  valueColor="text-[var(--win)]"
                   last
                 />
               </div>
@@ -361,15 +365,15 @@ export default async function StallningPage() {
 
             {/* Skam */}
             <section>
-              <h2 className="mb-3 text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                Skam
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                <span aria-hidden>💀</span> Skam
               </h2>
               <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
                 <StatRow
                   label="Sämst ROI"
                   player={stats.worstRoi?.name}
                   value={stats.worstRoi ? fmtRoi(stats.worstRoi.roi) : "–"}
-                  valueColor="text-red-600"
+                  valueColor="text-[var(--loss)]"
                 />
                 <StatRow
                   label="Mest förlorat"
@@ -379,7 +383,7 @@ export default async function StallningPage() {
                       ? `${stats.mostLost.totalLost.toLocaleString("sv-SE")} coins`
                       : "–"
                   }
-                  valueColor="text-red-600"
+                  valueColor="text-[var(--loss)]"
                 />
                 <StatRow
                   label="Längsta förlorarserie"
@@ -398,7 +402,7 @@ export default async function StallningPage() {
                       ? `−${stats.worstBet.amount.toLocaleString("sv-SE")} (${stats.worstBet.odds.toFixed(2)}x)`
                       : "–"
                   }
-                  valueColor="text-red-600"
+                  valueColor="text-[var(--loss)]"
                   last
                 />
               </div>
