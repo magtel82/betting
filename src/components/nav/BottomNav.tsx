@@ -62,6 +62,16 @@ function LeaderboardIcon({ className }: { className?: string }) {
   );
 }
 
+function PersonIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+  );
+}
+
 // ─── Nav items ────────────────────────────────────────────────────────────────
 
 const navItems = [
@@ -70,6 +80,7 @@ const navItems = [
   { href: "/mina-bet",  label: "Mina bet", Icon: SlipIcon },
   { href: "/grupper",   label: "Grupper",  Icon: GroupsIcon },
   { href: "/stallning", label: "Ställning",Icon: LeaderboardIcon },
+  { href: "/profil",    label: "Profil",   Icon: PersonIcon },
 ];
 
 // ─── BottomNav ────────────────────────────────────────────────────────────────
