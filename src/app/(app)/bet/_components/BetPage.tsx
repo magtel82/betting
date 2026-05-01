@@ -284,9 +284,6 @@ export function BetPage({
   };
 
   return (
-    {/* Bottom padding accounts for the fixed slip panel:
-        collapsed (~56px panel + ~56px BottomNav = pb-28),
-        expanded (panel up to 70vh — use 74vh so last match is scrollable above it). */}
     <div className={
       !showPanel ? "pb-6" :
       panelOpen  ? "pb-[74vh] lg:pb-6" :
