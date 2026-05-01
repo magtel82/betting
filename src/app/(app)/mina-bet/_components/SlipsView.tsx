@@ -24,7 +24,7 @@ export function SlipsView({ slips, currentUserId }: Props) {
   return (
     <div>
       {/* ── Tab bar ────────────────────────────────────────────────────────── */}
-      <div className="sticky top-[57px] z-30 border-b border-gray-200 bg-white">
+      <div className="sticky top-[61px] z-30 border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-lg gap-2 px-4 py-2.5">
           <TabButton
             label={`Mina${mySlips.length > 0 ? ` (${mySlips.length})` : ""}`}

@@ -300,7 +300,7 @@ export default async function DashboardPage() {
               )}
 
               {marketsWithBet === marketsTotal && marketsTotal > 0 && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg bg-[var(--win-50)] px-3 py-2 text-xs text-green-800">
+                <div className="mt-3 flex items-center gap-2 rounded-lg bg-[var(--win-50)] px-3 py-2 text-xs text-[var(--win)]">
                   <span className="font-bold text-[var(--win)]">✓</span>
                   <span className="font-medium">Alla marknader är satta</span>
                 </div>

@@ -362,10 +362,10 @@ export function BetPage({
                   <div className="flex items-start gap-2">
                     <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--win)] text-xs font-bold text-white">✓</span>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-green-900">
+                      <p className="text-sm font-bold text-[var(--win)]">
                         {successResult.wasAmend ? "Slipet är ändrat!" : "Slipet är placerat!"}
                       </p>
-                      <p className="mt-0.5 text-xs text-green-800">
+                      <p className="mt-0.5 text-xs text-[var(--win)]">
                         Möjlig vinst:{" "}
                         <strong className="tabular-nums">{successResult.potentialPayout.toLocaleString("sv-SE")}</strong>{" "}
                         🪙 · Odds <strong className="tabular-nums">{successResult.combinedOdds.toFixed(2)}x</strong>
@@ -374,11 +374,11 @@ export function BetPage({
                         <button
                           type="button"
                           onClick={() => setSuccessResult(null)}
-                          className="text-xs font-medium text-green-700 underline underline-offset-2"
+                          className="text-xs font-medium text-[var(--win)] underline underline-offset-2"
                         >
                           Stäng
                         </button>
-                        <Link href="/mina-bet" className="text-xs font-medium text-green-700 underline underline-offset-2">
+                        <Link href="/mina-bet" className="text-xs font-medium text-[var(--win)] underline underline-offset-2">
                           Se dina slip →
                         </Link>
                       </div>
@@ -426,7 +426,7 @@ export function BetPage({
 
           {/* ── Right column: desktop slip panel ───────────────────────── */}
           {showPanel && (
-            <div className="hidden lg:block lg:flex-[2] lg:sticky lg:top-[57px] lg:pt-3">
+            <div className="hidden lg:block lg:flex-[2] lg:sticky lg:top-[61px] lg:pt-3">
               <SlipPanel {...slipPanelProps} isSidebar />
             </div>
           )}

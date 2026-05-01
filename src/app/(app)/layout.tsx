@@ -33,10 +33,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* Persistent user strip — sticky, always visible above page header */}
-      <div className="sticky top-0 z-50 h-9 border-b border-gray-100 bg-white">
+      {/* Persistent user strip — sticky above TopBar */}
+      <div className="sticky top-0 z-50 h-10 border-b border-gray-100 bg-white shadow-[0_1px_0_0_#f3f4f6]">
         <div className="mx-auto flex h-full max-w-lg items-center justify-between px-4">
-          <span className="text-xs font-semibold tracking-wide text-gray-300">VM BET</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--primary)]/50 select-none">
+            VM BET
+          </span>
           <UserMenu displayName={displayName} coins={coins} />
         </div>
       </div>

@@ -156,7 +156,7 @@ export function SlipPanel({
             <button type="button" onClick={() => adjustStake(10)} aria-label="Öka insats med 10"
               className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-gray-100 text-lg font-bold text-gray-700 hover:bg-gray-200 active:bg-gray-300">+</button>
           </div>
-          {stakeError && <p className="text-xs text-red-500">{stakeError}</p>}
+          {stakeError && <p className="text-xs text-[var(--loss)]">{stakeError}</p>}
         </div>
 
         {potentialPayout > 0 && !stakeError && (
@@ -166,8 +166,8 @@ export function SlipPanel({
           </div>
         )}
         {errorMsg && (
-          <div className="mx-4 mt-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2">
-            <p className="text-xs text-red-600">{errorMsg}</p>
+          <div className="mx-4 mt-2 rounded-lg border border-[var(--loss)]/20 bg-[var(--loss-50)] px-3 py-2">
+            <p className="text-xs text-[var(--loss)]">{errorMsg}</p>
           </div>
         )}
         {hasOddsChanged && (
@@ -318,7 +318,7 @@ export function SlipPanel({
               <button type="button" onClick={() => adjustStake(10)} aria-label="Öka insats med 10"
                 className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-gray-100 text-xl font-bold text-gray-700 hover:bg-gray-200 active:bg-gray-300">+</button>
             </div>
-            {stakeError && <p className="text-xs text-red-500">{stakeError}</p>}
+            {stakeError && <p className="text-xs text-[var(--loss)]">{stakeError}</p>}
           </div>
 
           {potentialPayout > 0 && !stakeError && (
@@ -329,8 +329,8 @@ export function SlipPanel({
           )}
 
           {errorMsg && (
-            <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2">
-              <p className="text-xs text-red-600">{errorMsg}</p>
+            <div className="rounded-lg border border-[var(--loss)]/20 bg-[var(--loss-50)] px-3 py-2">
+              <p className="text-xs text-[var(--loss)]">{errorMsg}</p>
             </div>
           )}
           {hasOddsChanged && (

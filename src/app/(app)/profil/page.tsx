@@ -32,7 +32,7 @@ export default async function ProfilPage() {
               <p className="truncate font-semibold text-gray-900">{profile.display_name}</p>
               <p className="truncate text-sm text-gray-400">{user.email}</p>
               {isAdmin && (
-                <span className="mt-0.5 inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                <span className="mt-0.5 inline-block rounded-full bg-[var(--primary-50)] px-2 py-0.5 text-xs font-semibold text-[var(--primary)]">
                   Admin
                 </span>
               )}

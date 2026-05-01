@@ -57,25 +57,27 @@ function WalletSummary({
   const pct    = total > 0 ? Math.round((placed / total) * 100) : 0;
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-gray-900">Special-wallet</p>
-        <p className="text-sm font-semibold text-gray-900">{fmtCoins(total)}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Special-wallet</p>
+        <p className="text-base font-bold tabular-nums text-gray-900">
+          {total.toLocaleString("sv-SE")} <span className="text-[var(--coin)]">🪙</span>
+        </p>
       </div>
 
-      <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+      <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
         <div
-          className="h-full rounded-full bg-blue-500 transition-all"
+          className="h-full rounded-full bg-[var(--primary)] transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
 
-      <div className="flex justify-between text-xs text-gray-500">
-        <span>
-          <span className="font-medium text-gray-700">{fmtCoins(placed)}</span> placerade
+      <div className="mt-2 flex justify-between text-xs">
+        <span className="text-gray-500">
+          <strong className="tabular-nums text-[var(--primary)]">{placed.toLocaleString("sv-SE")}</strong> placerade ({pct}%)
         </span>
-        <span>
-          <span className="font-medium text-gray-700">{fmtCoins(specialWallet)}</span> kvar
+        <span className="text-gray-500">
+          <strong className="tabular-nums text-gray-800">{specialWallet.toLocaleString("sv-SE")}</strong> kvar
         </span>
       </div>
     </div>
@@ -91,24 +93,34 @@ function DeadlineBanner({ deadline }: { deadline: string | null }) {
 
   if (passed) {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-        <p className="text-sm font-semibold text-red-700">Deadline passerade</p>
-        <p className="mt-0.5 text-xs text-red-600">
-          {fmtDeadline(deadline)} — inga fler ändringar tillåts.
-        </p>
+      <div className="rounded-xl border border-red-200 bg-[var(--loss-50)] p-4 shadow-sm">
+        <div className="flex items-start gap-2.5">
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--loss)] text-xs font-bold text-white">!</span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-[var(--loss)]">Deadline passerade</p>
+            <p className="mt-0.5 text-xs text-[var(--loss)]">
+              {fmtDeadline(deadline)} — inga fler ändringar tillåts.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-1">
-      <p className="text-sm font-semibold text-amber-800">
-        Deadline: {fmtDeadline(deadline)}
-      </p>
-      <p className="text-xs text-amber-700">
-        Coins som inte placerats vid deadline försvinner — de går inte att ta med till
-        vanliga bet.
-      </p>
+    <div className="rounded-xl border border-amber-200 bg-[var(--coin-50)] p-4 shadow-sm">
+      <div className="flex items-start gap-2.5">
+        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--coin)] text-xs font-bold text-white">⏱</span>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-amber-900">
+            Deadline: {fmtDeadline(deadline)}
+          </p>
+          <p className="mt-0.5 text-xs text-amber-800">
+            Coins som inte placerats vid deadline försvinner — de går inte att ta med till
+            vanliga bet.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -148,7 +160,7 @@ function SubmitBtn({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+      className="h-12 w-full rounded-lg bg-[var(--primary)] text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--primary-600)] active:bg-[var(--primary-600)] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Sparar…" : label}
     </button>
@@ -163,7 +175,7 @@ function CancelButton() {
     <button
       type="submit"
       disabled={pending}
-      className="text-xs text-gray-400 underline hover:text-red-600 disabled:opacity-50"
+      className="text-xs text-gray-400 underline hover:text-[var(--loss)] disabled:opacity-50"
     >
       {pending ? "Avbokar…" : "Avboka bet"}
     </button>
@@ -180,7 +192,7 @@ function CancelForm({ betId }: { betId: string }) {
     <form action={action}>
       <input type="hidden" name="bet_id" value={betId} />
       {state?.ok === false && (
-        <p className="mb-1 text-xs text-red-600">{state.error}</p>
+        <p className="mb-1 text-xs text-[var(--loss)]">{state.error}</p>
       )}
       <CancelButton />
     </form>
@@ -201,25 +213,27 @@ function CurrentBet({
   const isFixed = market.type === "sverige_mal";
 
   return (
-    <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 space-y-1.5">
+    <div className="rounded-lg border border-[var(--primary)]/20 bg-[var(--primary-50)] p-3 space-y-1.5">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Ditt aktiva bet</p>
+        <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--primary)]">
+          ✓ Ditt aktiva bet
+        </p>
         {!isLocked && <CancelForm betId={bet.id} />}
       </div>
-      <p className="text-sm font-medium text-gray-900">{bet.selection_text}</p>
-      <div className="flex gap-4 text-xs text-gray-600">
-        <span>Insats: <strong>{fmtCoins(bet.stake)}</strong></span>
+      <p className="text-sm font-bold text-gray-900">{bet.selection_text}</p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-700">
+        <span>Insats: <strong className="tabular-nums">{fmtCoins(bet.stake)}</strong></span>
         {isFixed ? (
-          <span>Möjlig vinst: <strong>{fmtCoins(bet.potential_payout)}</strong> (4×)</span>
+          <span>Möjlig vinst: <strong className="tabular-nums text-[var(--win)]">{fmtCoins(bet.potential_payout)}</strong> (4×)</span>
         ) : (
           <span>
-            Odds: <strong>{Number(bet.odds_snapshot).toFixed(2)}</strong> · Möjlig vinst:{" "}
-            <strong>{fmtCoins(bet.potential_payout)}</strong>
+            Odds: <strong className="tabular-nums">{Number(bet.odds_snapshot).toFixed(2)}</strong> · Möjlig vinst:{" "}
+            <strong className="tabular-nums text-[var(--win)]">{fmtCoins(bet.potential_payout)}</strong>
           </span>
         )}
       </div>
       {!isLocked && (
-        <p className="text-[11px] text-blue-600">Du kan ändra ditt bet tills deadline.</p>
+        <p className="text-[11px] text-[var(--primary-600)]">Du kan ändra ditt bet tills deadline.</p>
       )}
     </div>
   );
@@ -284,7 +298,7 @@ function MarketCard({
           </p>
         )}
         {!isFixed && baseOdds != null && (
-          <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+          <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[var(--primary-50)] px-2 py-0.5 text-[11px] font-semibold text-[var(--primary)]">
             Odds: {Number(baseOdds).toFixed(2)}
           </p>
         )}
@@ -304,7 +318,7 @@ function MarketCard({
             <input type="hidden" name="odds_snapshot" value={oddsToUse ?? ""} />
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-gray-700">
+              <label className="block text-xs font-semibold text-gray-700">
                 {inputLabel}
               </label>
               {market.type === "sverige_mal" ? (
@@ -317,7 +331,7 @@ function MarketCard({
                     step={1}
                     placeholder={inputPlaceholder}
                     required
-                    className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
+                    className="h-12 w-full rounded-lg border border-gray-200 px-3.5 text-sm text-gray-900 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
                   />
                   <p className="text-xs text-gray-400">(0–12 mål)</p>
                 </>
@@ -328,16 +342,16 @@ function MarketCard({
                   placeholder={inputPlaceholder}
                   required
                   autoComplete="off"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
+                  className="h-12 w-full rounded-lg border border-gray-200 px-3.5 text-sm text-gray-900 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
                 />
               )}
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-baseline justify-between">
-                <label className="text-xs font-medium text-gray-700">Insats (coins)</label>
+                <label className="text-xs font-semibold text-gray-700">Insats</label>
                 <span className="text-[11px] text-gray-400">
-                  Max {fmtCoins(effectiveWallet)}
+                  Max {effectiveWallet.toLocaleString("sv-SE")} 🪙
                 </span>
               </div>
               <input
@@ -350,13 +364,13 @@ function MarketCard({
                 required
                 value={stakeInput}
                 onChange={(e) => setStakeInput(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none"
+                className="h-12 w-full rounded-lg border border-gray-200 px-3.5 text-sm text-gray-900 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
               />
               {preview != null && (
                 <p className="text-xs text-gray-500">
                   Möjlig vinst:{" "}
-                  <strong className="text-gray-800">{fmtCoins(preview)}</strong>
-                  {isFixed && " (4× insats)"}
+                  <strong className="tabular-nums text-[var(--win)]">{fmtCoins(preview)}</strong>
+                  {isFixed && " (4×)"}
                 </p>
               )}
             </div>
@@ -369,14 +383,14 @@ function MarketCard({
             )}
 
             {state?.ok === false && state.code !== "odds_changed" && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-                {state.error}
+              <p className="flex items-center gap-2 rounded-lg border border-red-100 bg-[var(--loss-50)] px-3 py-2.5 text-sm font-medium text-[var(--loss)]">
+                <span aria-hidden>⚠</span> {state.error}
               </p>
             )}
 
             {state?.ok === true && (
-              <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-                Bet placerat!
+              <p className="flex items-center gap-2 rounded-lg border border-green-100 bg-[var(--win-50)] px-3 py-2.5 text-sm font-semibold text-[var(--win)]">
+                <span aria-hidden>✓</span> Bet placerat!
               </p>
             )}
 
@@ -385,7 +399,9 @@ function MarketCard({
         )}
 
         {isLocked && !activeBet && (
-          <p className="text-sm text-gray-400">Inget bet placerat.</p>
+          <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
+            Inget bet placerades för denna marknad.
+          </p>
         )}
       </div>
     </section>
@@ -409,8 +425,8 @@ function BeforeDeadlineNotice() {
 
 function OthersBetRow({ entry }: { entry: OtherBetEntry }) {
   const statusBadge =
-    entry.status === "won"  ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700">Vann</span>  :
-    entry.status === "lost" ? <span className="rounded-full bg-red-100   px-2 py-0.5 text-[11px] font-semibold text-red-700">Förlorade</span> :
+    entry.status === "won"  ? <span className="rounded-full bg-[var(--win-50)] px-2 py-0.5 text-[11px] font-semibold text-[var(--win)]">Vann</span>  :
+    entry.status === "lost" ? <span className="rounded-full bg-[var(--loss-50)] px-2 py-0.5 text-[11px] font-semibold text-[var(--loss)]">Förlorade</span> :
     null;
 
   return (

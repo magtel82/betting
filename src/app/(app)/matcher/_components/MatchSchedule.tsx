@@ -60,7 +60,7 @@ function PhaseTabBar({
   onChange: (t: PhaseTab) => void;
 }) {
   return (
-    <div className="sticky top-[57px] z-30 flex gap-1.5 overflow-x-auto border-b border-gray-200 bg-white px-4 py-2 scrollbar-none">
+    <div className="sticky top-[61px] z-30 flex gap-1.5 overflow-x-auto border-b border-gray-200 bg-white px-4 py-2 scrollbar-none">
       {tabs.map((tab) => (
         <button
           key={tab.id}

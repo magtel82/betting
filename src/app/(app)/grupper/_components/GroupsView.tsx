@@ -64,7 +64,7 @@ export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatch
           ) : (
             <>
               {/* Group letter selector + Visa alla toggle */}
-              <div className="sticky top-[57px] z-30 border-b border-gray-200 bg-white">
+              <div className="sticky top-[61px] z-30 border-b border-gray-200 bg-white">
                 <div className="relative">
                   <div className="flex gap-1.5 overflow-x-auto px-4 py-2 scrollbar-none">
                     {availableLetters.map((letter) => (

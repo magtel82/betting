@@ -280,7 +280,7 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
                   type="button"
                   onClick={handleDeleteClick}
                   disabled={isPending}
-                  className="h-10 flex-1 rounded-lg bg-[var(--loss)] text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                  className="h-10 flex-1 rounded-lg bg-[var(--loss)] text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
                 >
                   {isPending ? "Tar bort…" : "Bekräfta"}
                 </button>

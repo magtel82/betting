@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// ─── Icons ────────────────────────────────────────────────────────────────────
-
 function HomeIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -72,24 +70,23 @@ function PersonIcon({ className }: { className?: string }) {
   );
 }
 
-// ─── Nav items ────────────────────────────────────────────────────────────────
-
 const navItems = [
-  { href: "/",          label: "Hem",      Icon: HomeIcon },
-  { href: "/bet",       label: "Spela",    Icon: BetIcon },
-  { href: "/mina-bet",  label: "Mina bet", Icon: SlipIcon },
-  { href: "/grupper",   label: "Grupper",  Icon: GroupsIcon },
-  { href: "/stallning", label: "Ställning",Icon: LeaderboardIcon },
-  { href: "/profil",    label: "Profil",   Icon: PersonIcon },
+  { href: "/",          label: "Hem",       Icon: HomeIcon },
+  { href: "/bet",       label: "Spela",     Icon: BetIcon },
+  { href: "/mina-bet",  label: "Mina bet",  Icon: SlipIcon },
+  { href: "/grupper",   label: "Grupper",   Icon: GroupsIcon },
+  { href: "/stallning", label: "Ställning", Icon: LeaderboardIcon },
+  { href: "/profil",    label: "Profil",    Icon: PersonIcon },
 ];
-
-// ─── BottomNav ────────────────────────────────────────────────────────────────
 
 export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       <div className="mx-auto flex max-w-lg">
         {navItems.map(({ href, label, Icon }) => {
           const isActive = pathname === href;
@@ -97,11 +94,22 @@ export function BottomNav() {
             <Link
               key={href}
               href={href}
-              className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors ${
-                isActive ? "text-gray-900" : "text-gray-400 hover:text-gray-600"
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
+                isActive
+                  ? "text-[var(--primary)]"
+                  : "text-gray-400 hover:text-gray-600"
               }`}
             >
-              <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : ""}`} />
+              {/* Small active indicator dot above icon */}
+              <span
+                className={`mb-0.5 h-0.5 w-4 rounded-full transition-opacity ${
+                  isActive ? "bg-[var(--primary)] opacity-100" : "opacity-0"
+                }`}
+                aria-hidden
+              />
+              <Icon
+                className={`h-5 w-5 ${isActive ? "stroke-[2.5px]" : "stroke-2"}`}
+              />
               <span className={isActive ? "font-semibold" : ""}>{label}</span>
             </Link>
           );
