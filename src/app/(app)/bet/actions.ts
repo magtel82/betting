@@ -54,6 +54,32 @@ export async function amendSlipAction(
     return { ok: false, code: "invalid_slip_id", error: "Ogiltigt slip-ID" };
   }
 
+  // Mirror the same structural validation used in placeSlip() — catch bad
+  // input before any DB round-trip, and give a clean error on duplicates
+  // (the DB unique constraint would also catch it, but with a less clear code).
+  if (!Array.isArray(selections) || selections.length < 1 || selections.length > 5) {
+    return { ok: false, code: "invalid_selection_count", error: "Slipet måste ha 1–5 matcher" };
+  }
+
+  if (!Number.isInteger(stake) || stake < 10) {
+    return { ok: false, code: "stake_too_low", error: "Minsta insats är 10 coins" };
+  }
+
+  const matchIds = selections.map((s) => s.matchId);
+  if (new Set(matchIds).size !== matchIds.length) {
+    return { ok: false, code: "duplicate_match", error: "Max en selection per match i ett slip" };
+  }
+
+  for (const sel of selections) {
+    if (!["home", "draw", "away"].includes(sel.outcome)) {
+      return { ok: false, code: "invalid_outcome", error: "Ogiltigt utfall" };
+    }
+    const oddsNum = Number(sel.oddsSnapshot);
+    if (!Number.isFinite(oddsNum) || oddsNum <= 1) {
+      return { ok: false, code: "invalid_odds", error: "Ogiltiga odds i selection" };
+    }
+  }
+
   const supabase = await createClient();
 
   // Resolve league_member_id needed for the quick client-side stake check.

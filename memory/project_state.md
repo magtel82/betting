@@ -31,7 +31,14 @@ Fas 7C klar (2026-04-29). Supabase-projektet fyzdvppcvfaqbzkhvsjr är initierat 
 - Grupplottdrag (02_teams.sql): Lagindelningen kan behöva rättas mot officiellt FIFA WC 2026-lottdrag. Strukturen är intern konsistent men okontrollerad mot faktiskt lottdrag (genomfört dec 2025).
 - Manuellt SQL-steg krävs för befintliga members som skapades med fel plånbok: köra migration 0014 i Supabase-dashboarden.
 
+## Säkerhets- och bugfixar (2026-05-01)
+
+- BUG-1: potential_payout är nu bigint i bet_slips och special_bets; alla tre placement-RPCer och settle_special_market omskrivna med bigint-variabler
+- BUG-2: Ny RLS-policy "special_bets: league members can read after deadline" — spelare ser andras specialbets i samma liga när deadline har passerat
+- SEC-1: /api/debug-auth borttagen helt
+- SEC-2: auth callback saniterar next-parametern (rejecterar tomma, protocol-relative och externa paths)
+- LOGIC-2: amendSlipAction har nu samma strukturella validering som placeSlip (count, duplicate match_id, outcome, odds)
+
 ## Nästa steg
 
-- Bekräfta att slip kan läggas efter migrationerna (kolla serverloggen för eventuellt kvar-error)
 - Rätta lag/grupper om FIFA-lottdrag avviker från seed
