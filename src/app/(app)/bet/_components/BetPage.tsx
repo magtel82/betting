@@ -201,7 +201,6 @@ export function BetPage({
 
     const next = [...selections, { matchId, outcome, oddsSnapshot }];
     setSelections(next);
-    if (next.length === 1) setPanelOpen(true);
   }
 
   function handleRemove(matchId: string) {
@@ -285,7 +284,14 @@ export function BetPage({
   };
 
   return (
-    <div className={showPanel ? "pb-28 lg:pb-6" : "pb-6"}>
+    {/* Bottom padding accounts for the fixed slip panel:
+        collapsed (~56px panel + ~56px BottomNav = pb-28),
+        expanded (panel up to 70vh — use 74vh so last match is scrollable above it). */}
+    <div className={
+      !showPanel ? "pb-6" :
+      panelOpen  ? "pb-[74vh] lg:pb-6" :
+                   "pb-28 lg:pb-6"
+    }>
       <div className="mx-auto max-w-[480px] px-4 lg:max-w-[900px]">
         <div className="lg:flex lg:gap-8 lg:items-start">
 
