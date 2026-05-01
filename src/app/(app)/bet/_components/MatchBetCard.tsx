@@ -2,8 +2,6 @@
 
 import type { MatchWithTeamsAndOdds, BetOutcome } from "@/types";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 const STAGE_LABEL: Record<string, string> = {
   group:       "Grupp",
   r32:         "Omg. 32",
@@ -22,24 +20,22 @@ function swTime(utc: string) {
   });
 }
 
-// ─── OddsButton ───────────────────────────────────────────────────────────────
-
 interface OddsButtonProps {
   label:      string;
   odds:       number;
   selected:   boolean;
   disabled:   boolean;
   onClick:    () => void;
-  highlight?: boolean; // amber for odds-changed state
+  highlight?: boolean;
 }
 
 function OddsButton({ label, odds, selected, disabled, onClick, highlight }: OddsButtonProps) {
-  const base    = "flex flex-1 flex-col items-center justify-center rounded-lg min-h-[64px] px-1 text-xs transition-colors select-none";
-  const active  = highlight
-    ? "bg-amber-500 text-white font-semibold"
-    : "bg-gray-900 text-white font-semibold";
-  const idle    = "bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300";
-  const off     = "bg-gray-50 text-gray-300 cursor-not-allowed";
+  const base   = "flex flex-1 flex-col items-center justify-center rounded-lg min-h-[52px] px-1 text-xs transition-colors select-none";
+  const active = highlight
+    ? "bg-amber-500 text-white font-semibold shadow-sm"
+    : "bg-[var(--primary)] text-white font-semibold shadow-sm";
+  const idle   = "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 active:bg-gray-200";
+  const off    = "bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed";
 
   return (
     <button
@@ -49,15 +45,17 @@ function OddsButton({ label, odds, selected, disabled, onClick, highlight }: Odd
       aria-pressed={selected}
       className={`${base} ${selected ? active : disabled ? off : idle}`}
     >
-      <span className="font-semibold leading-none">{label}</span>
-      <span className={`mt-1 tabular-nums text-[12px] font-medium ${selected ? "opacity-75" : "text-gray-500"}`}>
+      <span className="text-[11px] font-bold uppercase leading-none tracking-wider">{label}</span>
+      <span
+        className={`mt-1 text-sm font-bold tabular-nums leading-none ${
+          selected ? "" : "text-gray-900"
+        }`}
+      >
         {odds.toFixed(2)}
       </span>
     </button>
   );
 }
-
-// ─── MatchBetCard ─────────────────────────────────────────────────────────────
 
 interface Props {
   match:              MatchWithTeamsAndOdds;
@@ -88,11 +86,9 @@ export function MatchBetCard({
     onToggle(match.id, outcome, oddsValue);
   }
 
-  // A button is disabled when: no odds, OR the slip is full (5) and this match
-  // is not already in it. If already in slip, buttons are still enabled (for deselect).
-  function btnDisabled(outcome: BetOutcome) {
+  function btnDisabled(_outcome: BetOutcome) {
     if (!bettable) return true;
-    if (isInSlip) return false; // always allow toggling a match that's already selected
+    if (isInSlip) return false;
     return isMaxed;
   }
 
@@ -102,31 +98,31 @@ export function MatchBetCard({
         isChanged
           ? "border-amber-300"
           : isInSlip
-            ? "border-gray-400"
+            ? "border-[var(--primary)] ring-1 ring-[var(--primary)]/15"
             : "border-gray-200"
       }`}
     >
       {/* Header */}
       <div className="mb-2.5 flex items-center justify-between">
-        <span className="text-xs text-gray-400">#{match.match_number} · {stageLabel}</span>
-        <span className="text-xs text-gray-500">{swTime(match.scheduled_at)}</span>
+        <span className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
+          {stageLabel}
+        </span>
+        <span className="text-xs font-medium text-gray-500 tabular-nums">{swTime(match.scheduled_at)}</span>
       </div>
 
       {/* Teams */}
       <div className="mb-3 flex items-center gap-2">
-        {/* Home */}
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
-          <span className="shrink-0 text-xl leading-none">{match.home_team?.flag_emoji ?? "🏳"}</span>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="shrink-0 text-2xl leading-none">{match.home_team?.flag_emoji ?? "🏳"}</span>
           <span className="truncate text-sm font-semibold text-gray-900">
             {match.home_team?.short_name ?? "TBD"}
           </span>
         </div>
 
-        <span className="shrink-0 text-xs text-gray-300">vs</span>
+        <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-gray-300">vs</span>
 
-        {/* Away (right-aligned) */}
-        <div className="flex min-w-0 flex-1 flex-row-reverse items-center gap-1.5">
-          <span className="shrink-0 text-xl leading-none">{match.away_team?.flag_emoji ?? "🏳"}</span>
+        <div className="flex min-w-0 flex-1 flex-row-reverse items-center gap-2">
+          <span className="shrink-0 text-2xl leading-none">{match.away_team?.flag_emoji ?? "🏳"}</span>
           <span className="truncate text-right text-sm font-semibold text-gray-900">
             {match.away_team?.short_name ?? "TBD"}
           </span>
@@ -135,7 +131,7 @@ export function MatchBetCard({
 
       {/* Odds buttons or no-odds badge */}
       {bettable ? (
-        <div className="flex gap-1.5">
+        <div className="flex gap-2">
           <OddsButton
             label="H"
             odds={odds.home_odds}
@@ -167,7 +163,6 @@ export function MatchBetCard({
         </span>
       )}
 
-      {/* Odds-changed notice on the card itself */}
       {isChanged && (
         <p className="mt-2 text-xs font-medium text-amber-600">
           Oddsen har uppdaterats — kontrollera och bekräfta.

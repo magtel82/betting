@@ -286,8 +286,8 @@ export function BetPage({
   return (
     <div className={
       !showPanel ? "pb-6" :
-      panelOpen  ? "pb-[74vh] lg:pb-6" :
-                   "pb-28 lg:pb-6"
+      panelOpen  ? "pb-[70vh] lg:pb-6" :
+                   "pb-24 lg:pb-6"
     }>
       <div className="mx-auto max-w-[480px] px-4 lg:max-w-[900px]">
         <div className="lg:flex lg:gap-8 lg:items-start">
@@ -319,32 +319,30 @@ export function BetPage({
 
             {/* Wallet info */}
             <div className="py-3">
-              <div className="flex items-center gap-3 text-xs text-gray-500">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
                 <span>
                   Saldo:{" "}
-                  <strong className="text-gray-900">
-                    {matchWallet.toLocaleString("sv-SE")} coins
-                  </strong>
+                  <strong className="text-gray-900 tabular-nums">
+                    {matchWallet.toLocaleString("sv-SE")}
+                  </strong>{" "}
+                  <span className="text-[var(--coin)]">🪙</span>
                 </span>
                 {isAmendMode && amendRefund > 0 && (
-                  <>
-                    <span className="text-gray-200">+</span>
-                    <span className="text-amber-600">
-                      återbetalas{" "}
-                      <strong>{amendRefund.toLocaleString("sv-SE")}</strong>
-                    </span>
-                  </>
+                  <span className="text-amber-600">
+                    + återbetalas{" "}
+                    <strong className="tabular-nums">{amendRefund.toLocaleString("sv-SE")}</strong>
+                  </span>
                 )}
-                <span className="text-gray-200">|</span>
+                <span className="text-gray-300">·</span>
                 <span>
                   Max insats:{" "}
-                  <strong className={canBet ? "text-gray-900" : "text-red-500"}>
-                    {maxStake.toLocaleString("sv-SE")} coins
+                  <strong className={`tabular-nums ${canBet ? "text-gray-900" : "text-[var(--loss)]"}`}>
+                    {maxStake.toLocaleString("sv-SE")}
                   </strong>
                 </span>
               </div>
               {!canBet && (
-                <p className="mt-1 text-xs text-red-500">
+                <p className="mt-1 text-xs font-medium text-[var(--loss)]">
                   Du behöver minst {MIN_WALLET} coins för att lägga ett slip.
                 </p>
               )}
@@ -352,34 +350,39 @@ export function BetPage({
 
             {/* Instruction */}
             <div className="pb-3">
-              <p className="text-xs text-gray-400">
-                Välj 1–5 matcher · max 30% av saldo per slip
+              <p className="text-xs text-gray-500">
+                Välj <strong className="text-gray-700">1–5 matcher</strong> · max 30% av saldo per slip
               </p>
             </div>
 
             {/* Success banner */}
             {successResult && (
               <div className="pb-3">
-                <div className="rounded-xl border border-green-200 bg-green-50 p-4">
-                  <p className="text-sm font-semibold text-green-800">
-                    {successResult.wasAmend ? "Slipet är ändrat!" : "Slipet är placerat!"}
-                  </p>
-                  <p className="mt-1 text-xs text-green-700">
-                    Möjlig vinst:{" "}
-                    <strong>{successResult.potentialPayout.toLocaleString("sv-SE")} coins</strong>
-                    {" "}· Odds: {successResult.combinedOdds.toFixed(2)}x
-                  </p>
-                  <div className="mt-2 flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setSuccessResult(null)}
-                      className="text-xs text-green-700 underline"
-                    >
-                      Stäng
-                    </button>
-                    <Link href="/mina-bet" className="text-xs text-green-700 underline">
-                      Se dina slip →
-                    </Link>
+                <div className="rounded-xl border border-green-200 bg-[var(--win-50)] p-4 shadow-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--win)] text-xs font-bold text-white">✓</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-green-900">
+                        {successResult.wasAmend ? "Slipet är ändrat!" : "Slipet är placerat!"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-green-800">
+                        Möjlig vinst:{" "}
+                        <strong className="tabular-nums">{successResult.potentialPayout.toLocaleString("sv-SE")}</strong>{" "}
+                        🪙 · Odds <strong className="tabular-nums">{successResult.combinedOdds.toFixed(2)}x</strong>
+                      </p>
+                      <div className="mt-2 flex items-center gap-4">
+                        <button
+                          type="button"
+                          onClick={() => setSuccessResult(null)}
+                          className="text-xs font-medium text-green-700 underline underline-offset-2"
+                        >
+                          Stäng
+                        </button>
+                        <Link href="/mina-bet" className="text-xs font-medium text-green-700 underline underline-offset-2">
+                          Se dina slip →
+                        </Link>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
