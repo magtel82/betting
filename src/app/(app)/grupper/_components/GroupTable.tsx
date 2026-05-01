@@ -36,17 +36,16 @@ export function GroupTable({ letter, standings }: Props) {
 
         {/* Rows */}
         {standings.map((s, i) => {
-          const isTop2      = i < 2;
-          // After position 2: slightly more visible cutoff line
-          const borderCls   = i === 1
-            ? "border-b-2 border-blue-100"
+          const isTop2     = i < 2;
+          const borderCls  = i === 1
+            ? "border-b-2 border-[var(--primary)]/30"
             : i < standings.length - 1
               ? "border-b border-gray-100"
               : "";
-          // Non-qualifying rows get a very subtle different background
-          const bgCls       = isTop2 ? "bg-white" : "bg-gray-50/60";
-          // Left accent bar for qualified rows
-          const leftAccent  = isTop2 ? "border-l-2 border-blue-400" : "border-l-2 border-transparent";
+          const bgCls      = isTop2 ? "bg-white" : "bg-gray-50/60";
+          const leftAccent = isTop2
+            ? "border-l-[3px] border-[var(--primary)]"
+            : "border-l-[3px] border-transparent";
 
           return (
             <div
@@ -55,7 +54,7 @@ export function GroupTable({ letter, standings }: Props) {
               style={{ gridTemplateColumns: "20px 1fr 28px 28px 28px 28px 36px 28px 32px" }}
             >
               {/* Position */}
-              <span className={`text-center text-xs font-medium ${isTop2 ? "text-blue-600" : "text-gray-400"}`}>
+              <span className={`text-center text-xs font-bold ${isTop2 ? "text-[var(--primary)]" : "text-gray-400"}`}>
                 {i + 1}
               </span>
 
@@ -70,7 +69,7 @@ export function GroupTable({ letter, standings }: Props) {
               <span className="text-center text-xs text-gray-600">{s.won}</span>
               <span className="text-center text-xs text-gray-600">{s.drawn}</span>
               <span className="text-center text-xs text-gray-600">{s.lost}</span>
-              <span className={`text-center text-xs font-medium ${s.gd > 0 ? "text-green-600" : s.gd < 0 ? "text-red-500" : "text-gray-500"}`}>
+              <span className={`text-center text-xs font-semibold ${s.gd > 0 ? "text-[var(--win)]" : s.gd < 0 ? "text-[var(--loss)]" : "text-gray-500"}`}>
                 {gdLabel(s.gd)}
               </span>
               <span className="text-center text-xs text-gray-600">{s.gf}</span>

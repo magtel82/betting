@@ -33,9 +33,9 @@ export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatch
       <div className="flex border-b border-gray-200 bg-white">
         <button
           onClick={() => setView("groups")}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex-1 py-3 text-sm font-semibold transition-colors ${
             view === "groups"
-              ? "border-b-2 border-gray-900 text-gray-900"
+              ? "border-b-2 border-[var(--primary)] text-[var(--primary)]"
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
@@ -43,9 +43,9 @@ export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatch
         </button>
         <button
           onClick={() => setView("bracket")}
-          className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex-1 py-3 text-sm font-semibold transition-colors ${
             view === "bracket"
-              ? "border-b-2 border-gray-900 text-gray-900"
+              ? "border-b-2 border-[var(--primary)] text-[var(--primary)]"
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
@@ -73,8 +73,8 @@ export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatch
                         onClick={() => { setActive(letter); setShowAll(false); }}
                         className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
                           !showAll && active === letter
-                            ? "bg-gray-900 text-white"
-                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            ? "bg-[var(--primary)] text-white shadow-sm"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
                       >
                         {letter}
@@ -82,10 +82,10 @@ export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatch
                     ))}
                     <button
                       onClick={() => setShowAll((v) => !v)}
-                      className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                      className={`ml-1 shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                         showAll
-                          ? "bg-gray-900 text-white"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          ? "bg-[var(--primary)] text-white shadow-sm"
+                          : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                       }`}
                     >
                       Alla
