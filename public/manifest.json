@@ -4,8 +4,8 @@
   "description": "Privat betting-app för VM 2026",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f9fafb",
-  "theme_color": "#1d4ed8",
+  "background_color": "#f8fafc",
+  "theme_color": "#1a56db",
   "orientation": "portrait",
   "icons": [
     {

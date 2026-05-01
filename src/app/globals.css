@@ -1,26 +1,89 @@
 @import "tailwindcss";
 
+/* ─── Design tokens ──────────────────────────────────────────────────────────
+   Single source of truth for the VM Bet 2026 visual language.
+   - primary  = brand blue
+   - coin     = amber/gold for currency
+   - win/loss = profit/loss semantics
+   ────────────────────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background:  #f8fafc;
+  --surface:     #ffffff;
+  --foreground:  #0f172a;
+
+  --primary:     #1a56db;
+  --primary-600: #1e40af;
+  --primary-50:  #eff4ff;
+
+  --coin:        #f59e0b;
+  --coin-50:     #fffbeb;
+
+  --win:         #16a34a;
+  --win-50:      #f0fdf4;
+
+  --loss:        #dc2626;
+  --loss-50:     #fef2f2;
+
+  --border:      #e5e7eb;
+  --muted:       #6b7280;
+
+  --shadow-sm:   0 1px 2px 0 rgba(15, 23, 42, 0.04), 0 1px 3px 0 rgba(15, 23, 42, 0.06);
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface:    var(--surface);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-primary:     var(--primary);
+  --color-primary-600: var(--primary-600);
+  --color-primary-50:  var(--primary-50);
+
+  --color-coin:        var(--coin);
+  --color-coin-50:     var(--coin-50);
+
+  --color-win:    var(--win);
+  --color-win-50: var(--win-50);
+
+  --color-loss:    var(--loss);
+  --color-loss-50: var(--loss-50);
+
+  --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
+html, body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color:      var(--foreground);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Hide horizontal scrollbars on tab/group strips */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { scrollbar-width: none; }
+
+/* Disable iOS text-size auto-bumping on rotation */
+html { -webkit-text-size-adjust: 100%; }
+
+/* Tap highlight off — we have our own active states */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Native number-spinner cleanup on the few stake inputs we use */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] { -moz-appearance: textfield; }
+
+/* Skeleton shimmer for loading states */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .55; }
+}
+.skeleton {
+  background: #e5e7eb;
+  border-radius: 8px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
 }
