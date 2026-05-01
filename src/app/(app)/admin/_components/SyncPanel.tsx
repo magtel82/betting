@@ -11,7 +11,7 @@ function SyncButton({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+      className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--primary-600)] disabled:opacity-50"
     >
       {pending ? "Kör…" : label}
     </button>
@@ -21,8 +21,8 @@ function SyncButton({ label }: { label: string }) {
 function Feedback({ state }: { state: ActionState }) {
   if (!state) return null;
   if ("error" in state)
-    return <p className="text-sm text-red-600">{state.error}</p>;
-  return <p className="text-sm text-green-600">{state.success}</p>;
+    return <p className="text-sm text-[var(--loss)]">{state.error}</p>;
+  return <p className="text-sm text-[var(--win)]">{state.success}</p>;
 }
 
 export function SyncPanel() {

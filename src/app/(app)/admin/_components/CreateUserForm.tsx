@@ -10,7 +10,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+      className="w-full rounded-lg bg-[var(--primary)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-600)] disabled:opacity-50"
     >
       {pending ? "Skapar konto…" : "Skapa konto"}
     </button>
@@ -39,7 +39,7 @@ export function CreateUserForm() {
               type="text"
               placeholder="Spelarnamn"
               required
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
             />
           </div>
           <div>
@@ -51,7 +51,7 @@ export function CreateUserForm() {
               type="email"
               placeholder="epost@example.com"
               required
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
             />
           </div>
           <div>
@@ -64,15 +64,15 @@ export function CreateUserForm() {
               placeholder="Minst 8 tecken"
               minLength={8}
               required
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
             />
           </div>
 
           {state && "error" in state && (
-            <p className="text-sm text-red-600">{state.error}</p>
+            <p className="text-sm text-[var(--loss)]">{state.error}</p>
           )}
           {state && "success" in state && (
-            <p className="text-sm text-green-600">{state.success}</p>
+            <p className="text-sm text-[var(--win)]">{state.success}</p>
           )}
 
           <SubmitButton />

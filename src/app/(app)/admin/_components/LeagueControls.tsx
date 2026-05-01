@@ -11,7 +11,7 @@ function SubmitButton({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+      className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--primary-600)] disabled:opacity-50"
     >
       {pending ? "Sparar…" : label}
     </button>
@@ -21,8 +21,8 @@ function SubmitButton({ label }: { label: string }) {
 function Feedback({ state }: { state: { error?: string; success?: string } | null }) {
   if (!state) return null;
   if ("error" in state)
-    return <p className="text-sm text-red-600">{state.error}</p>;
-  return <p className="text-sm text-green-600">{state.success}</p>;
+    return <p className="text-sm text-[var(--loss)]">{state.error}</p>;
+  return <p className="text-sm text-[var(--win)]">{state.success}</p>;
 }
 
 const STATUS_OPTIONS: { value: TournamentStatus; label: string }[] = [
@@ -52,7 +52,7 @@ export function LeagueControls({ league, tournament }: Props) {
             <p className="text-sm font-medium text-gray-900">{league.name}</p>
             <p className="text-xs text-gray-500">
               Status:{" "}
-              <span className={league.is_open ? "text-green-600" : "text-red-600"}>
+              <span className={league.is_open ? "text-[var(--win)]" : "text-[var(--loss)]"}>
                 {league.is_open ? "Öppen" : "Stängd"}
               </span>
             </p>
@@ -73,7 +73,7 @@ export function LeagueControls({ league, tournament }: Props) {
           <select
             name="status"
             defaultValue={tournament.status}
-            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
           >
             {STATUS_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>

@@ -11,7 +11,7 @@ function AddButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+      className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--primary-600)] disabled:opacity-50"
     >
       {pending ? "Lägger till…" : "Bjud in"}
     </button>
@@ -24,7 +24,7 @@ function RemoveButton() {
     <button
       type="submit"
       disabled={pending}
-      className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+      className="text-xs text-red-500 hover:text-[var(--loss)] disabled:opacity-50"
     >
       {pending ? "…" : "Ta bort"}
     </button>
@@ -72,16 +72,16 @@ export function InviteForm({ whitelist }: Props) {
             type="email"
             placeholder="epost@example.com"
             required
-            className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="min-w-0 flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
           />
           <AddButton />
         </form>
 
         {state && "error" in state && (
-          <p className="text-sm text-red-600">{state.error}</p>
+          <p className="text-sm text-[var(--loss)]">{state.error}</p>
         )}
         {state && "success" in state && (
-          <p className="text-sm text-green-600">{state.success}</p>
+          <p className="text-sm text-[var(--win)]">{state.success}</p>
         )}
 
         {whitelist.length > 0 && (

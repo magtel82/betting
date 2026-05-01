@@ -40,7 +40,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+      className="rounded-lg bg-[var(--win)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
     >
       {pending ? "Avgör…" : "Avgör marknaden"}
     </button>
@@ -63,7 +63,7 @@ function MarketSettleRow({ market }: { market: MarketWithBets }) {
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium text-gray-700">{meta.label}</p>
-          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+          <span className="rounded-full bg-[var(--win-50)] px-2 py-0.5 text-xs font-semibold text-[var(--win)]">
             Avgjord
           </span>
         </div>
@@ -116,7 +116,7 @@ function MarketSettleRow({ market }: { market: MarketWithBets }) {
             step={market.type === "sverige_mal" ? 1 : undefined}
             placeholder={meta.placeholder}
             required
-            className="w-40 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+            className="w-40 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
             aria-label={`Utfall för ${meta.label}`}
           />
           <SubmitButton />
@@ -127,10 +127,10 @@ function MarketSettleRow({ market }: { market: MarketWithBets }) {
         </p>
 
         {state && "error" in state && (
-          <p className="text-sm text-red-600">{state.error}</p>
+          <p className="text-sm text-[var(--loss)]">{state.error}</p>
         )}
         {state && "success" in state && (
-          <p className="text-sm text-green-600">{state.success}</p>
+          <p className="text-sm text-[var(--win)]">{state.success}</p>
         )}
       </form>
     </div>

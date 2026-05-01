@@ -25,9 +25,9 @@ const STAGE_LABEL: Record<string, string> = {
 // null label = don't show (scheduled is the default, no badge needed)
 const STATUS_CONFIG: Record<MatchStatus, { label: string | null; cls: string }> = {
   scheduled: { label: null,            cls: "" },
-  live:      { label: "Pågår",         cls: "text-green-600 font-semibold" },
+  live:      { label: "Pågår",         cls: "text-[var(--win)] font-semibold" },
   finished:  { label: "Avslutad",      cls: "text-gray-400" },
-  void:      { label: "Ogiltig",       cls: "text-red-500" },
+  void:      { label: "Ogiltig",       cls: "text-[var(--loss)]" },
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ export function MatchCard({ match }: Props) {
   return (
     <div
       className={`rounded-xl border bg-white p-3 shadow-sm ${
-        isLive ? "border-green-300" : "border-gray-200"
+        isLive ? "border-[var(--win)]/40" : "border-gray-200"
       }`}
     >
       {/* Top row */}
@@ -76,7 +76,7 @@ export function MatchCard({ match }: Props) {
           {statusLabel && (
             <span className={`flex items-center gap-1 text-xs ${statusCls}`}>
               {isLive && (
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--win)] animate-pulse" />
               )}
               {statusLabel}
             </span>

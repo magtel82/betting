@@ -73,7 +73,7 @@ export function SettlePanel({ matches }: Props) {
             id="settle-match"
             value={selectedId}
             onChange={(e) => { setSelectedId(e.target.value); setResult(null); }}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
           >
             <option value="">Välj match…</option>
             {matches.map((m) => (
@@ -90,7 +90,7 @@ export function SettlePanel({ matches }: Props) {
             type="button"
             onClick={handleSettle}
             disabled={!selectedId || isPending}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--primary-600)] disabled:opacity-50"
           >
             {isPending ? "Avgör…" : "Avgör slip"}
           </button>
@@ -110,11 +110,11 @@ export function SettlePanel({ matches }: Props) {
 
 function SettleResultBadge({ result }: { result: SettleMatchResult }) {
   if (!result.ok) {
-    return <p className="text-sm text-red-600">{result.error}</p>;
+    return <p className="text-sm text-[var(--loss)]">{result.error}</p>;
   }
   const total = result.slipsWon + result.slipsLost + result.slipsVoid;
   return (
-    <p className="text-sm text-green-700">
+    <p className="text-sm text-[var(--win)]">
       {total === 0 ? "Inga öppna slip att avgöra." : `${total} slip avgjorda.`}
     </p>
   );
@@ -135,13 +135,13 @@ function SettleResultDetail({ result }: { result: Extract<SettleMatchResult, { o
       )}
       {total > 0 && (
         <div className="flex gap-4">
-          {slipsWon  > 0 && <span className="text-green-700">✓ {slipsWon} vann</span>}
-          {slipsLost > 0 && <span className="text-red-600">✗ {slipsLost} förlorade</span>}
+          {slipsWon  > 0 && <span className="text-[var(--win)]">✓ {slipsWon} vann</span>}
+          {slipsLost > 0 && <span className="text-[var(--loss)]">✗ {slipsLost} förlorade</span>}
           {slipsVoid > 0 && <span className="text-gray-500">○ {slipsVoid} ogiltigförklarade</span>}
         </div>
       )}
       {totalPayout > 0 && (
-        <p>Totalt utbetalt: <strong className="text-green-700">{totalPayout.toLocaleString("sv-SE")} coins</strong></p>
+        <p>Totalt utbetalt: <strong className="text-[var(--win)]">{totalPayout.toLocaleString("sv-SE")} coins</strong></p>
       )}
     </div>
   );

@@ -67,7 +67,7 @@ function PhaseTabBar({
           onClick={() => onChange(tab.id)}
           className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
             active === tab.id
-              ? "bg-gray-900 text-white"
+              ? "bg-[var(--primary)] text-white"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200"
           }`}
         >
@@ -94,7 +94,7 @@ function GroupFilterBar({
         onClick={() => onChange(null)}
         className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
           active === null
-            ? "bg-gray-900 text-white"
+            ? "bg-[var(--primary)] text-white"
             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
         }`}
       >
@@ -106,7 +106,7 @@ function GroupFilterBar({
           onClick={() => onChange(g)}
           className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
             active === g
-              ? "bg-gray-900 text-white"
+              ? "bg-[var(--primary)] text-white"
               : "bg-gray-100 text-gray-600 hover:bg-gray-200"
           }`}
         >

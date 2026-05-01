@@ -11,7 +11,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+      className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--primary-600)] disabled:opacity-50"
     >
       {pending ? "Sparar…" : "Spara odds"}
     </button>
@@ -20,8 +20,8 @@ function SubmitButton() {
 
 function Feedback({ state }: { state: { error?: string; success?: string } | null }) {
   if (!state) return null;
-  if ("error" in state) return <p className="text-sm text-red-600">{state.error}</p>;
-  return <p className="text-sm text-green-600">{state.success}</p>;
+  if ("error" in state) return <p className="text-sm text-[var(--loss)]">{state.error}</p>;
+  return <p className="text-sm text-[var(--win)]">{state.success}</p>;
 }
 
 function matchLabel(m: MatchWithTeams): string {
@@ -69,7 +69,7 @@ export function MatchOddsForm({ matches }: Props) {
               id="odds-match"
               name="match_id"
               ref={selectRef}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
             >
               {matches.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -94,7 +94,7 @@ export function MatchOddsForm({ matches }: Props) {
                 min="1.01"
                 placeholder={currentOdds ? String(currentOdds.home_odds) : "1.50"}
                 defaultValue={currentOdds?.home_odds ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
               />
             </div>
             <div className="space-y-1">
@@ -109,7 +109,7 @@ export function MatchOddsForm({ matches }: Props) {
                 min="1.01"
                 placeholder={currentOdds ? String(currentOdds.draw_odds) : "3.50"}
                 defaultValue={currentOdds?.draw_odds ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
               />
             </div>
             <div className="space-y-1">
@@ -124,7 +124,7 @@ export function MatchOddsForm({ matches }: Props) {
                 min="1.01"
                 placeholder={currentOdds ? String(currentOdds.away_odds) : "5.00"}
                 defaultValue={currentOdds?.away_odds ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
               />
             </div>
           </div>

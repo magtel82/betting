@@ -133,7 +133,7 @@ export default async function AdminPage() {
       <>
         <TopBar title="Admin" showBack />
         <div className="mx-auto max-w-lg px-4 py-6">
-          <p className="text-red-500">Kunde inte hämta ligadata.</p>
+          <p className="text-[var(--loss)]">Kunde inte hämta ligadata.</p>
         </div>
       </>
     );

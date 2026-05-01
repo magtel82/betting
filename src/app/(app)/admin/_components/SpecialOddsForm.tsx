@@ -13,7 +13,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+      className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--primary-600)] disabled:opacity-50"
     >
       {pending ? "Sparar…" : "Spara odds"}
     </button>
@@ -22,8 +22,8 @@ function SubmitButton() {
 
 function Feedback({ state }: { state: { error?: string; success?: string } | null }) {
   if (!state) return null;
-  if ("error" in state) return <p className="text-sm text-red-600">{state.error}</p>;
-  return <p className="text-sm text-green-600">{state.success}</p>;
+  if ("error" in state) return <p className="text-sm text-[var(--loss)]">{state.error}</p>;
+  return <p className="text-sm text-[var(--win)]">{state.success}</p>;
 }
 
 // ─── MarketOddsRow ────────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ function MarketOddsRow({
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-gray-700">{label}</p>
         {currentOdds !== null ? (
-          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
+          <span className="rounded-full bg-[var(--primary-50)] px-2 py-0.5 text-xs font-semibold text-[var(--primary)]">
             Nuv. odds: {currentOdds.toFixed(2)}
           </span>
         ) : (
@@ -78,7 +78,7 @@ function MarketOddsRow({
           step="0.01"
           min="1.01"
           placeholder={currentOdds ? String(currentOdds) : "t.ex. 5.50"}
-          className="w-28 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="w-28 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
           aria-label={`Odds för ${label}`}
         />
         <SubmitButton />

@@ -13,8 +13,8 @@ function ToggleButton({ label, danger }: { label: string; danger?: boolean }) {
       disabled={pending}
       className={`rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
         danger
-          ? "bg-red-50 text-red-700 hover:bg-red-100"
-          : "bg-green-50 text-green-700 hover:bg-green-100"
+          ? "bg-[var(--loss-50)] text-[var(--loss)] hover:opacity-80"
+          : "bg-[var(--win-50)] text-[var(--win)] hover:opacity-80"
       }`}
     >
       {pending ? "…" : label}
@@ -36,13 +36,13 @@ function MemberRow({ member, currentUserId }: { member: LeagueMemberWithProfile;
         <p className="text-xs text-gray-500">
           {member.role === "admin" ? "Admin" : "Spelare"} ·{" "}
           {member.is_active ? (
-            <span className="text-green-600">Aktiv</span>
+            <span className="text-[var(--win)]">Aktiv</span>
           ) : (
-            <span className="text-red-600">Inaktiv</span>
+            <span className="text-[var(--loss)]">Inaktiv</span>
           )}
         </p>
         {state && "error" in state && (
-          <p className="text-xs text-red-600">{state.error}</p>
+          <p className="text-xs text-[var(--loss)]">{state.error}</p>
         )}
       </div>
       {!isSelf && (

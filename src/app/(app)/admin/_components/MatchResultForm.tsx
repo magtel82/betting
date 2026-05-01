@@ -11,7 +11,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+      className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--primary-600)] disabled:opacity-50"
     >
       {pending ? "Sparar…" : "Spara resultat"}
     </button>
@@ -20,8 +20,8 @@ function SubmitButton() {
 
 function Feedback({ state }: { state: { error?: string; success?: string } | null }) {
   if (!state) return null;
-  if ("error" in state) return <p className="text-sm text-red-600">{state.error}</p>;
-  return <p className="text-sm text-green-600">{state.success}</p>;
+  if ("error" in state) return <p className="text-sm text-[var(--loss)]">{state.error}</p>;
+  return <p className="text-sm text-[var(--win)]">{state.success}</p>;
 }
 
 const STATUS_OPTIONS: { value: MatchStatus; label: string }[] = [
@@ -73,7 +73,7 @@ export function MatchResultForm({ matches }: Props) {
             <select
               id="result-match"
               name="match_id"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
             >
               {matches.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -92,7 +92,7 @@ export function MatchResultForm({ matches }: Props) {
               id="result-status"
               name="status"
               defaultValue={defaultMatch?.status ?? "scheduled"}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
             >
               {STATUS_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -119,7 +119,7 @@ export function MatchResultForm({ matches }: Props) {
                     : "0"
                 }
                 defaultValue={defaultMatch?.home_score ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
               />
             </div>
             <div className="space-y-1">
@@ -137,7 +137,7 @@ export function MatchResultForm({ matches }: Props) {
                     : "0"
                 }
                 defaultValue={defaultMatch?.away_score ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
               />
             </div>
           </div>
@@ -159,7 +159,7 @@ export function MatchResultForm({ matches }: Props) {
                     : ""
                 }
                 defaultValue={defaultMatch?.home_score_ht ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
               />
             </div>
             <div className="space-y-1">
@@ -177,7 +177,7 @@ export function MatchResultForm({ matches }: Props) {
                     : ""
                 }
                 defaultValue={defaultMatch?.away_score_ht ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
               />
             </div>
           </div>

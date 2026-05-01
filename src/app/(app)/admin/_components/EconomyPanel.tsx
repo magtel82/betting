@@ -58,14 +58,14 @@ function LockSection() {
           type="button"
           onClick={handle}
           disabled={isPending}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--primary-600)] disabled:opacity-50"
         >
           {isPending ? "Låser…" : "Lås startade slip"}
         </button>
         {result && (
           result.ok
-            ? <p className="text-sm text-green-700">{result.locked} slip låsta.</p>
-            : <p className="text-sm text-red-600">{result.error}</p>
+            ? <p className="text-sm text-[var(--win)]">{result.locked} slip låsta.</p>
+            : <p className="text-sm text-[var(--loss)]">{result.error}</p>
         )}
       </div>
     </div>
@@ -97,13 +97,13 @@ function FeeSection({ defaultFeeDate }: { defaultFeeDate: string }) {
           type="date"
           value={date}
           onChange={(e) => { setDate(e.target.value); setResult(null); }}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
         />
         <button
           type="button"
           onClick={handle}
           disabled={isPending || !date}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--primary-600)] disabled:opacity-50"
         >
           {isPending ? "Tillämpar…" : "Tillämpa avgift"}
         </button>
@@ -114,7 +114,7 @@ function FeeSection({ defaultFeeDate }: { defaultFeeDate: string }) {
 }
 
 function FeeResultBadge({ result }: { result: ApplyInactivityFeeResult }) {
-  if (!result.ok) return <p className="text-sm text-red-600">{result.error}</p>;
+  if (!result.ok) return <p className="text-sm text-[var(--loss)]">{result.error}</p>;
   if (result.skipped === "not_a_matchday") {
     return <p className="text-sm text-gray-500">Ingen matchdag — ingen avgift.</p>;
   }
@@ -123,7 +123,7 @@ function FeeResultBadge({ result }: { result: ApplyInactivityFeeResult }) {
   if (result.active   > 0) parts.push(`${result.active} aktiva (ej debiterade)`);
   if (result.skipZero > 0) parts.push(`${result.skipZero} med tomt saldo`);
   if (result.skipIdem > 0) parts.push(`${result.skipIdem} redan klara`);
-  return <p className="text-sm text-green-700">{parts.join(", ") || "Inga åtgärder."}</p>;
+  return <p className="text-sm text-[var(--win)]">{parts.join(", ") || "Inga åtgärder."}</p>;
 }
 
 // ─── Gruppbonus ───────────────────────────────────────────────────────────────
@@ -150,7 +150,7 @@ function BonusSection() {
           type="button"
           onClick={handle}
           disabled={isPending}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-lg bg-[var(--primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--primary-600)] disabled:opacity-50"
         >
           {isPending ? "Delar ut…" : "Dela ut gruppbonus"}
         </button>
@@ -164,10 +164,10 @@ function BonusSection() {
 }
 
 function BonusResultBadge({ result }: { result: GroupBonusResult }) {
-  if (!result.ok) return <p className="text-sm text-red-600">{result.error}</p>;
+  if (!result.ok) return <p className="text-sm text-[var(--loss)]">{result.error}</p>;
   if ("skipped" in result) return <p className="text-sm text-gray-500">Redan utdelad.</p>;
   return (
-    <p className="text-sm text-green-700">
+    <p className="text-sm text-[var(--win)]">
       Bonus utdelad till {result.bonuses.length} spelare.
     </p>
   );
