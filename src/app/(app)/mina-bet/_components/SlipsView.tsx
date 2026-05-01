@@ -24,17 +24,19 @@ export function SlipsView({ slips, currentUserId }: Props) {
   return (
     <div>
       {/* ── Tab bar ────────────────────────────────────────────────────────── */}
-      <div className="sticky top-[57px] z-30 flex gap-1.5 border-b border-gray-200 bg-white px-4 py-2">
-        <TabButton
-          label={`Mina slip${mySlips.length > 0 ? ` (${mySlips.length})` : ""}`}
-          active={tab === "mine"}
-          onClick={() => setTab("mine")}
-        />
-        <TabButton
-          label={`Alla slip${allSlips.length > 0 ? ` (${allSlips.length})` : ""}`}
-          active={tab === "all"}
-          onClick={() => setTab("all")}
-        />
+      <div className="sticky top-[57px] z-30 border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-lg gap-2 px-4 py-2.5">
+          <TabButton
+            label={`Mina${mySlips.length > 0 ? ` (${mySlips.length})` : ""}`}
+            active={tab === "mine"}
+            onClick={() => setTab("mine")}
+          />
+          <TabButton
+            label={`Alla${allSlips.length > 0 ? ` (${allSlips.length})` : ""}`}
+            active={tab === "all"}
+            onClick={() => setTab("all")}
+          />
+        </div>
       </div>
 
       {/* ── Content ─────────────────────────────────────────────────────────── */}
@@ -71,9 +73,9 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+      className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
         active
-          ? "bg-gray-900 text-white"
+          ? "bg-[var(--primary)] text-white shadow-sm"
           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
       }`}
     >
@@ -85,17 +87,28 @@ function TabButton({
 function EmptyState({ tab }: { tab: "mine" | "all" }) {
   if (tab === "mine") {
     return (
-      <div className="rounded-xl border border-dashed border-gray-200 py-12 text-center">
-        <p className="text-sm text-gray-400">Du har inte lagt några slip ännu.</p>
-        <Link href="/bet" className="mt-2 inline-block text-xs font-medium text-gray-900 underline underline-offset-2">
-          Lägg ett slip
+      <div className="rounded-xl border border-dashed border-gray-200 bg-white py-10 text-center">
+        <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-[var(--primary-50)] text-2xl">
+          🎯
+        </div>
+        <p className="text-sm font-medium text-gray-700">Du har inte lagt några slip ännu</p>
+        <p className="mt-1 text-xs text-gray-400">Dags att tippa första matcherna!</p>
+        <Link
+          href="/bet"
+          className="mt-4 inline-flex h-10 items-center justify-center rounded-lg bg-[var(--primary)] px-5 text-xs font-bold text-white shadow-sm hover:bg-[var(--primary-600)]"
+        >
+          Lägg ditt första slip
         </Link>
       </div>
     );
   }
   return (
-    <div className="py-16 text-center">
-      <p className="text-sm text-gray-400">Inga slip har lagts i ligan ännu.</p>
+    <div className="rounded-xl border border-dashed border-gray-200 bg-white py-10 text-center">
+      <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-gray-100 text-2xl">
+        📋
+      </div>
+      <p className="text-sm font-medium text-gray-700">Inga slip i ligan ännu</p>
+      <p className="mt-1 text-xs text-gray-400">Var först ut!</p>
     </div>
   );
 }
