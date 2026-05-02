@@ -218,11 +218,20 @@ export function resolveTeamDbName(apiName: string): string | null {
   return null;
 }
 
-// ─── Date-window matching ─────────────────────────────────────────────────────
-// Returns true if two ISO date strings are within toleranceMs of each other.
+// ─── Date matching ────────────────────────────────────────────────────────────
+
+// Returns true if two ISO timestamps are within toleranceMs of each other.
+// Used by results sync where both sides have accurate times.
 const MATCH_DATE_TOLERANCE_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 export function datesWithinTolerance(a: string, b: string): boolean {
   const diff = Math.abs(new Date(a).getTime() - new Date(b).getTime());
   return diff <= MATCH_DATE_TOLERANCE_MS;
+}
+
+// Returns true if two ISO timestamps fall on the same UTC calendar date.
+// Used by odds sync where the DB has placeholder times but correct dates —
+// two teams never meet twice on the same day so date-only matching is safe.
+export function sameCalendarDate(a: string, b: string): boolean {
+  return a.slice(0, 10) === b.slice(0, 10);
 }

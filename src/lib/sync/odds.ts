@@ -11,7 +11,11 @@
 // Matching strategy:
 //   For each API event, translate the English team name to the Swedish name
 //   stored in teams.name (via TEAM_NAME_TO_DB), then find the matching
-//   internal match by (home_name, away_name) + date window.
+//   internal match by (home_name, away_name) + same calendar date (UTC).
+//   Time is ignored because the DB may have placeholder kickoff times from
+//   seed data. Two teams never meet twice on the same day, so date-only
+//   matching is safe. When a match is found the exact kickoff time from the
+//   API is written back to matches.scheduled_at so the DB self-corrects.
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -20,7 +24,7 @@ import {
   OddsApiError,
   type OddsApiEvent,
 } from "@/lib/adapters/odds-api";
-import { resolveTeamDbName, datesWithinTolerance } from "./team-map";
+import { resolveTeamDbName, sameCalendarDate } from "./team-map";
 import { emptySyncResult, type SyncResult } from "./types";
 
 interface InternalMatch {
@@ -108,21 +112,22 @@ export async function syncOdds(): Promise<SyncResult> {
       continue;
     }
 
-    // Find matching internal match by Swedish name pair + date window
+    // Find matching internal match by Swedish name pair + same calendar date.
+    // Time is intentionally ignored — DB may have placeholder kickoff times.
     const internalMatch = internalMatches.find(
       (m) =>
         m.home_name === homeDbName &&
         m.away_name === awayDbName &&
-        datesWithinTolerance(m.scheduled_at, event.commence_time)
+        sameCalendarDate(m.scheduled_at, event.commence_time)
     );
 
     if (!internalMatch) {
       console.warn(
         `[sync/odds] No DB match for "${homeDbName}" vs "${awayDbName}" ` +
-        `at ${event.commence_time} (API: "${event.home_team}" vs "${event.away_team}")`
+        `on ${event.commence_time.slice(0, 10)} (API: "${event.home_team}" vs "${event.away_team}")`
       );
       result.errors.push(
-        `No internal match for "${homeDbName}" vs "${awayDbName}" at ${event.commence_time}`
+        `No internal match for "${homeDbName}" vs "${awayDbName}" on ${event.commence_time.slice(0, 10)}`
       );
       result.skipped++;
       continue;
@@ -132,6 +137,28 @@ export async function syncOdds(): Promise<SyncResult> {
     if (adminLockedIds.has(internalMatch.id)) {
       result.skipped++;
       continue;
+    }
+
+    // Backfill exact kickoff time from API if DB still has a placeholder.
+    // Safe to do unconditionally — idempotent if already correct.
+    if (internalMatch.scheduled_at !== event.commence_time) {
+      const { error: kickoffErr } = await db
+        .from("matches")
+        .update({ scheduled_at: event.commence_time })
+        .eq("id", internalMatch.id);
+
+      if (kickoffErr) {
+        console.warn(
+          `[sync/odds] Could not update kickoff for match ${internalMatch.id}: ${kickoffErr.message}`
+        );
+      } else {
+        console.log(
+          `[sync/odds] Kickoff updated for "${homeDbName}" vs "${awayDbName}": ` +
+          `${internalMatch.scheduled_at} → ${event.commence_time}`
+        );
+        // Keep in-memory copy in sync so subsequent runs in same batch are accurate
+        internalMatch.scheduled_at = event.commence_time;
+      }
     }
 
     // Aggregate odds from bookmakers
