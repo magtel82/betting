@@ -3,7 +3,7 @@
 // Fetches h2h (1x2) odds for WC 2026 matches.
 
 const BASE_URL = "https://api.the-odds-api.com/v4";
-const SPORT_KEY = "soccer_fifa_world_cup";
+export const SPORT_KEY = "soccer_fifa_world_cup";
 
 // ─── Response types ───────────────────────────────────────────────────────────
 
@@ -57,8 +57,53 @@ export async function fetchOddsForTournament(): Promise<OddsApiEvent[]> {
   url.searchParams.set("oddsFormat", "decimal");
   url.searchParams.set("dateFormat", "iso");
 
+  const debugUrl =
+    `${BASE_URL}/sports/${SPORT_KEY}/odds/?regions=eu&markets=h2h&oddsFormat=decimal&dateFormat=iso`;
+  console.log(`[odds-api] fetchOddsForTournament → ${debugUrl}`);
+
   const res = await fetch(url.toString(), {
     next: { revalidate: 0 },   // never cache — always fresh
+    headers: { "Accept": "application/json" },
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    const msg = `The Odds API returned ${res.status}: ${body}`;
+    console.error(`[odds-api] fetchOddsForTournament failed — ${msg}`);
+    throw new OddsApiError(res.status, msg);
+  }
+
+  const data = await res.json();
+  if (!Array.isArray(data)) {
+    throw new OddsApiError(0, "Unexpected response shape from The Odds API");
+  }
+  console.log(`[odds-api] fetchOddsForTournament → ${data.length} events`);
+  return data as OddsApiEvent[];
+}
+
+// ─── Sports list (for diagnostics) ───────────────────────────────────────────
+
+export interface OddsApiSport {
+  key:           string;
+  group:         string;
+  title:         string;
+  description:   string;
+  active:        boolean;
+  has_outrights: boolean;
+}
+
+export async function fetchAvailableSports(): Promise<{ sports: OddsApiSport[]; debugUrl: string }> {
+  const apiKey = process.env.ODDS_API_KEY;
+  if (!apiKey) throw new OddsApiError(0, "ODDS_API_KEY environment variable is not set");
+
+  const url = new URL(`${BASE_URL}/sports/`);
+  url.searchParams.set("apiKey", apiKey);
+  const debugUrl = `${BASE_URL}/sports/?apiKey=***`;
+
+  console.log(`[odds-api] fetchAvailableSports → ${debugUrl}`);
+
+  const res = await fetch(url.toString(), {
+    next: { revalidate: 0 },
     headers: { "Accept": "application/json" },
   });
 
@@ -69,9 +114,9 @@ export async function fetchOddsForTournament(): Promise<OddsApiEvent[]> {
 
   const data = await res.json();
   if (!Array.isArray(data)) {
-    throw new OddsApiError(0, "Unexpected response shape from The Odds API");
+    throw new OddsApiError(0, "Unexpected response shape from The Odds API sports endpoint");
   }
-  return data as OddsApiEvent[];
+  return { sports: data as OddsApiSport[], debugUrl };
 }
 
 // ─── Odds aggregation ─────────────────────────────────────────────────────────

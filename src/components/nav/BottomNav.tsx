@@ -97,7 +97,7 @@ export function BottomNav() {
               className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors ${
                 isActive
                   ? "text-[var(--primary)]"
-                  : "text-gray-400 hover:text-gray-600"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {/* Small active indicator dot above icon */}

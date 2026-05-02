@@ -43,11 +43,16 @@ function buildLeaderboard(members: MemberRow[], slips: SlipRow[]): LeaderboardEn
   const entries = members.map((m) => {
     const won = wonByMember.get(m.id) ?? [];
     const profile = Array.isArray(m.profile) ? (m.profile[0] ?? null) : m.profile;
+    const rawName = profile?.display_name;
     const emailPrefix = profile?.email?.split("@")[0];
+    const emailName = emailPrefix
+      ? emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
+      : undefined;
+    const name = rawName && !rawName.includes("@") ? rawName : (emailName ?? "Okänd");
     return {
       memberId: m.id,
       userId: m.user_id,
-      name: profile?.display_name ?? emailPrefix ?? "Okänd",
+      name,
       totalCoins: m.match_wallet + m.special_wallet,
       // Tie-breaker 1: highest final_odds on a single winning slip
       bestOdds: won.reduce((max, s) => Math.max(max, s.final_odds ?? s.combined_odds), 0),
@@ -109,8 +114,12 @@ function computeStats(members: MemberRow[], slips: SlipRow[]): Stats {
 
   for (const m of members) {
     const profile = Array.isArray(m.profile) ? (m.profile[0] ?? null) : m.profile;
+    const rawName = profile?.display_name;
     const emailPrefix = profile?.email?.split("@")[0];
-    const name = profile?.display_name ?? emailPrefix ?? "Okänd";
+    const emailName = emailPrefix
+      ? emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
+      : undefined;
+    const name = rawName && !rawName.includes("@") ? rawName : (emailName ?? "Okänd");
 
     // Sort by settled_at for streak calculation
     const settled = (byMember.get(m.id) ?? []).sort((a, b) =>

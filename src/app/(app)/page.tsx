@@ -26,6 +26,12 @@ type ActiveSlip = {
   status: "open" | "locked";
   stake: number;
   potential_payout: number;
+  selections: Array<{
+    match: Array<{
+      home_team: Array<{ short_name: string }>;
+      away_team: Array<{ short_name: string }>;
+    }>;
+  }> | null;
 };
 
 export default async function DashboardPage() {
@@ -62,7 +68,7 @@ export default async function DashboardPage() {
   const [slipsRes, matchesRes, marketsRes, betsRes] = await Promise.all([
     supabase
       .from("bet_slips")
-      .select("id, status, stake, potential_payout")
+      .select("id, status, stake, potential_payout, selections:bet_slip_selections(match:matches(home_team:teams!matches_home_team_id_fkey(short_name), away_team:teams!matches_away_team_id_fkey(short_name)))")
       .eq("league_member_id", member.id as string)
       .in("status", ["open", "locked"])
       .order("placed_at", { ascending: false }),
@@ -87,7 +93,7 @@ export default async function DashboardPage() {
       .eq("status", "active"),
   ]);
 
-  const openSlips   = (slipsRes.data ?? []) as ActiveSlip[];
+  const openSlips   = (slipsRes.data ?? []) as unknown as ActiveSlip[];
   const nextMatches = (matchesRes.data ?? []) as unknown as NextMatch[];
   const markets     = marketsRes.data ?? [];
   const activeBets  = betsRes.data ?? [];
@@ -172,36 +178,58 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {openSlips.slice(0, 3).map((slip) => (
-                <div
-                  key={slip.id}
-                  className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                        slip.status === "open"
-                          ? "bg-[var(--primary-50)] text-[var(--primary)]"
-                          : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
-                      {slip.status === "open" ? "Öppen" : "Låst"}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      Insats{" "}
-                      <strong className="tabular-nums text-gray-900">
-                        {slip.stake.toLocaleString("sv-SE")}
-                      </strong>
-                    </span>
+              {openSlips.slice(0, 3).map((slip) => {
+                const matchSummary = (slip.selections ?? [])
+                  .slice(0, 2)
+                  .map((s) => {
+                    const match = Array.isArray(s.match) ? s.match[0] : s.match;
+                    const ht = Array.isArray(match?.home_team) ? match.home_team[0] : match?.home_team;
+                    const at = Array.isArray(match?.away_team) ? match.away_team[0] : match?.away_team;
+                    const h = ht?.short_name ?? "?";
+                    const a = at?.short_name ?? "?";
+                    return `${h} vs ${a}`;
+                  })
+                  .join(", ");
+                const extraCount = (slip.selections?.length ?? 0) - 2;
+                return (
+                  <div
+                    key={slip.id}
+                    className="rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                            slip.status === "open"
+                              ? "bg-[var(--primary-50)] text-[var(--primary)]"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {slip.status === "open" ? "Öppen" : "Låst"}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Insats{" "}
+                          <strong className="tabular-nums text-gray-900">
+                            {slip.stake.toLocaleString("sv-SE")}
+                          </strong>
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-500 tabular-nums">
+                        Möjlig{" "}
+                        <strong className="text-[var(--win)]">
+                          {slip.potential_payout.toLocaleString("sv-SE")}
+                        </strong>
+                      </span>
+                    </div>
+                    {matchSummary && (
+                      <p className="mt-1 truncate text-[11px] text-gray-400">
+                        {matchSummary}
+                        {extraCount > 0 && ` +${extraCount} till`}
+                      </p>
+                    )}
                   </div>
-                  <span className="text-xs text-gray-500 tabular-nums">
-                    Möjlig{" "}
-                    <strong className="text-[var(--win)]">
-                      {slip.potential_payout.toLocaleString("sv-SE")}
-                    </strong>
-                  </span>
-                </div>
-              ))}
+                );
+              })}
               {openSlips.length > 3 && (
                 <p className="text-center text-xs text-gray-400">
                   +{openSlips.length - 3} till —{" "}

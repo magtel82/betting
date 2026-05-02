@@ -303,7 +303,9 @@ function MarketCard({
           </p>
         )}
         {hasNoOdds && (
-          <p className="mt-1 text-xs text-gray-400">Odds är ännu inte satta av admin.</p>
+          <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800">
+            <span aria-hidden>⏳</span> Väntar på odds
+          </span>
         )}
       </div>
 

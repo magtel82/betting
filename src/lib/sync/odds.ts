@@ -43,7 +43,11 @@ export async function syncOdds(): Promise<SyncResult> {
     .in("status", ["scheduled", "live"]);
 
   if (matchErr || !matches) {
-    result.errors.push(`DB read failed: ${matchErr?.message ?? "no data"}`);
+    const detail = matchErr
+      ? `message="${matchErr.message}" code="${matchErr.code}" hint="${matchErr.hint ?? ""}" details="${matchErr.details ?? ""}"`
+      : "no data returned";
+    console.error("[sync/odds] DB read failed:", detail);
+    result.errors.push(`DB read failed: ${matchErr?.message ?? "no data"} (code=${matchErr?.code ?? "?"}, hint=${matchErr?.hint ?? ""})`);
     return result;
   }
 

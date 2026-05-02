@@ -20,17 +20,16 @@ export function GroupTable({ letter, standings }: Props) {
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
         {/* Header */}
         <div
-          className="grid items-center border-b border-gray-100 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-400"
-          style={{ gridTemplateColumns: "20px 1fr 28px 28px 28px 28px 36px 28px 32px" }}
+          className="grid items-center border-b border-gray-100 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-400 grid-cols-[20px_1fr_28px_28px_28px_32px] sm:grid-cols-[20px_1fr_28px_28px_28px_28px_36px_28px_32px]"
         >
           <span className="text-center">#</span>
           <span>Lag</span>
-          <span className="text-center">S</span>
+          <span className="hidden sm:block text-center">S</span>
           <span className="text-center">V</span>
           <span className="text-center">O</span>
           <span className="text-center">F</span>
-          <span className="text-center">GD</span>
-          <span className="text-center">GM</span>
+          <span className="hidden sm:block text-center">GD</span>
+          <span className="hidden sm:block text-center">GM</span>
           <span className="text-center font-semibold text-gray-600">P</span>
         </div>
 
@@ -50,8 +49,7 @@ export function GroupTable({ letter, standings }: Props) {
           return (
             <div
               key={s.teamId}
-              className={`grid items-center px-3 py-2 text-sm tabular-nums ${borderCls} ${bgCls} ${leftAccent}`}
-              style={{ gridTemplateColumns: "20px 1fr 28px 28px 28px 28px 36px 28px 32px" }}
+              className={`grid items-center px-3 py-2 text-sm tabular-nums grid-cols-[20px_1fr_28px_28px_28px_32px] sm:grid-cols-[20px_1fr_28px_28px_28px_28px_36px_28px_32px] ${borderCls} ${bgCls} ${leftAccent}`}
             >
               {/* Position */}
               <span className={`text-center text-xs font-bold ${isTop2 ? "text-[var(--primary)]" : "text-gray-400"}`}>
@@ -65,14 +63,14 @@ export function GroupTable({ letter, standings }: Props) {
               </span>
 
               {/* Stats */}
-              <span className="text-center text-xs text-gray-600">{s.played}</span>
+              <span className="hidden sm:block text-center text-xs text-gray-600">{s.played}</span>
               <span className="text-center text-xs text-gray-600">{s.won}</span>
               <span className="text-center text-xs text-gray-600">{s.drawn}</span>
               <span className="text-center text-xs text-gray-600">{s.lost}</span>
-              <span className={`text-center text-xs font-semibold ${s.gd > 0 ? "text-[var(--win)]" : s.gd < 0 ? "text-[var(--loss)]" : "text-gray-500"}`}>
+              <span className={`hidden sm:block text-center text-xs font-semibold ${s.gd > 0 ? "text-[var(--win)]" : s.gd < 0 ? "text-[var(--loss)]" : "text-gray-500"}`}>
                 {gdLabel(s.gd)}
               </span>
-              <span className="text-center text-xs text-gray-600">{s.gf}</span>
+              <span className="hidden sm:block text-center text-xs text-gray-600">{s.gf}</span>
               <span className="text-center text-xs font-bold text-gray-900">{s.points}</span>
             </div>
           );

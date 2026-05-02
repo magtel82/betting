@@ -115,7 +115,7 @@ export function MatchBetCard({
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="shrink-0 text-2xl leading-none">{match.home_team?.flag_emoji ?? "🏳"}</span>
           <span className="truncate text-sm font-semibold text-gray-900">
-            {match.home_team?.short_name ?? "TBD"}
+            {match.home_team?.name ?? "TBD"}
           </span>
         </div>
 
@@ -124,7 +124,7 @@ export function MatchBetCard({
         <div className="flex min-w-0 flex-1 flex-row-reverse items-center gap-2">
           <span className="shrink-0 text-2xl leading-none">{match.away_team?.flag_emoji ?? "🏳"}</span>
           <span className="truncate text-right text-sm font-semibold text-gray-900">
-            {match.away_team?.short_name ?? "TBD"}
+            {match.away_team?.name ?? "TBD"}
           </span>
         </div>
       </div>
