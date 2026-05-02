@@ -1,13 +1,17 @@
 // ─── Team name normalisation ──────────────────────────────────────────────────
-// Maps English API names (The Odds API, football-data.org) → our internal
-// short_name (3-letter codes used in the teams table).
+// Two separate mappings:
 //
-// Both APIs use English names but with varying spelling conventions.
-// The Odds API tends to use "USA", "South Korea" etc.
-// football-data.org uses "United States", "Korea Republic" etc.
-// We map both to our consistent short_names.
+// TEAM_NAME_TO_SHORT — English API name → 3-letter short_name (used by
+//   results sync via football-data.org which returns English names and we
+//   match against teams.short_name).
 //
-// To add a new variation: add a new key pointing to the same short_name value.
+// TEAM_NAME_TO_DB — English API name → Swedish full name stored in
+//   teams.name (used by odds sync via The Odds API which returns English
+//   names and we match against teams.name).
+//
+// Add new spelling variants by adding extra keys pointing to the same value.
+
+// ─── English → 3-letter short_name ───────────────────────────────────────────
 
 export const TEAM_NAME_TO_SHORT: Record<string, string> = {
   // ── Grupp A ──────────────────────────────────────────────────────────────
@@ -92,13 +96,123 @@ export const TEAM_NAME_TO_SHORT: Record<string, string> = {
 };
 
 // Case-insensitive lookup.
-// Returns null if the name is not in the map.
 export function resolveTeamShortName(apiName: string): string | null {
   const direct = TEAM_NAME_TO_SHORT[apiName];
   if (direct) return direct;
-
   const lower = apiName.toLowerCase();
   for (const [key, val] of Object.entries(TEAM_NAME_TO_SHORT)) {
+    if (key.toLowerCase() === lower) return val;
+  }
+  return null;
+}
+
+// ─── English → Swedish DB name (teams.name) ───────────────────────────────────
+// Used by odds sync (The Odds API returns English names; DB stores Swedish).
+
+export const TEAM_NAME_TO_DB: Record<string, string> = {
+  // ── Grupp A ──────────────────────────────────────────────────────────────
+  "USA":                       "USA",
+  "United States":             "USA",
+  "United States of America":  "USA",
+  "Panama":                    "Panama",
+  "Albania":                   "Albanien",
+  "Ukraine":                   "Ukraina",
+
+  // ── Grupp B ──────────────────────────────────────────────────────────────
+  "Argentina":                 "Argentina",
+  "Chile":                     "Chile",
+  "Peru":                      "Peru",
+  "New Zealand":               "Nya Zeeland",
+
+  // ── Grupp C ──────────────────────────────────────────────────────────────
+  "Mexico":                    "Mexiko",
+  "Jamaica":                   "Jamaica",
+  "Venezuela":                 "Venezuela",
+  "Honduras":                  "Honduras",
+
+  // ── Grupp D ──────────────────────────────────────────────────────────────
+  "Spain":                     "Spanien",
+  "Brazil":                    "Brasilien",
+  "Japan":                     "Japan",
+  "Morocco":                   "Marocko",
+
+  // ── Grupp E ──────────────────────────────────────────────────────────────
+  "France":                    "Frankrike",
+  "Croatia":                   "Kroatien",
+  "Serbia":                    "Serbien",
+  "Ecuador":                   "Ecuador",
+
+  // ── Grupp F ──────────────────────────────────────────────────────────────
+  "England":                   "England",
+  "Colombia":                  "Colombia",
+  "Senegal":                   "Senegal",
+  "Paraguay":                  "Paraguay",
+
+  // ── Grupp G ──────────────────────────────────────────────────────────────
+  "Germany":                   "Tyskland",
+  "Portugal":                  "Portugal",
+  "South Korea":               "Sydkorea",
+  "Korea Republic":            "Sydkorea",
+  "Republic of Korea":         "Sydkorea",
+  "Costa Rica":                "Costa Rica",
+
+  // ── Grupp H ──────────────────────────────────────────────────────────────
+  "Netherlands":               "Nederländerna",
+  "Uruguay":                   "Uruguay",
+  "Nigeria":                   "Nigeria",
+  "Austria":                   "Österrike",
+
+  // ── Grupp I ──────────────────────────────────────────────────────────────
+  "Sweden":                    "Sverige",
+  "Switzerland":               "Schweiz",
+  "Ivory Coast":               "Elfenbenskusten",
+  "Côte d'Ivoire":             "Elfenbenskusten",
+  "Cote d'Ivoire":             "Elfenbenskusten",
+  "Australia":                 "Australien",
+
+  // ── Grupp J ──────────────────────────────────────────────────────────────
+  "Canada":                    "Kanada",
+  "Egypt":                     "Egypten",
+  "Iran":                      "Iran",
+  "IR Iran":                   "Iran",
+  "Ghana":                     "Ghana",
+
+  // ── Grupp K ──────────────────────────────────────────────────────────────
+  "Italy":                     "Italien",
+  "Denmark":                   "Danmark",
+  "Turkey":                    "Turkiet",
+  "Türkiye":                   "Turkiet",
+  "Poland":                    "Polen",
+
+  // ── Grupp L ──────────────────────────────────────────────────────────────
+  "Belgium":                   "Belgien",
+  "Tunisia":                   "Tunisien",
+  "Saudi Arabia":              "Saudiarabien",
+  "South Africa":              "Sydafrika",
+
+  // ── Extra lag som API returnerar (ej WC 2026-gruppspel) ──────────────────
+  "Czech Republic":            "Tjeckien",
+  "Bosnia & Herzegovina":      "Bosnien & Hercegovina",
+  "Haiti":                     "Haiti",
+  "Scotland":                  "Skottland",
+  "Curaçao":                   "Curaçao",
+  "Cape Verde":                "Kap Verde",
+  "Iraq":                      "Irak",
+  "Norway":                    "Norge",
+  "Algeria":                   "Algeriet",
+  "Jordan":                    "Jordanien",
+  "DR Congo":                  "Kongo-Kinshasa",
+  "Uzbekistan":                "Uzbekistan",
+  "Qatar":                     "Qatar",
+  "Kosovo":                    "Kosovo",
+};
+
+// Case-insensitive lookup. Returns null and logs a warning if name is unknown.
+export function resolveTeamDbName(apiName: string): string | null {
+  const direct = TEAM_NAME_TO_DB[apiName];
+  if (direct) return direct;
+  const lower = apiName.toLowerCase();
+  for (const [key, val] of Object.entries(TEAM_NAME_TO_DB)) {
     if (key.toLowerCase() === lower) return val;
   }
   return null;

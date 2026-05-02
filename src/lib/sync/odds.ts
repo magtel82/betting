@@ -9,8 +9,9 @@
 // them manually. Only rows with source='api' or no existing row are updated.
 //
 // Matching strategy:
-//   For each API event, resolve home/away teams to internal short_names,
-//   then find the matching internal match by short_name pair + date window.
+//   For each API event, translate the English team name to the Swedish name
+//   stored in teams.name (via TEAM_NAME_TO_DB), then find the matching
+//   internal match by (home_name, away_name) + date window.
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -19,15 +20,15 @@ import {
   OddsApiError,
   type OddsApiEvent,
 } from "@/lib/adapters/odds-api";
-import { resolveTeamShortName, datesWithinTolerance } from "./team-map";
+import { resolveTeamDbName, datesWithinTolerance } from "./team-map";
 import { emptySyncResult, type SyncResult } from "./types";
 
 interface InternalMatch {
   id:           string;
   scheduled_at: string;
   status:       string;
-  home_short:   string | null;   // resolved from home_team join
-  away_short:   string | null;
+  home_name:    string | null;   // teams.name (Swedish full name)
+  away_name:    string | null;
 }
 
 // ─── Main sync function ───────────────────────────────────────────────────────
@@ -36,10 +37,10 @@ export async function syncOdds(): Promise<SyncResult> {
   const result = emptySyncResult("the-odds-api");
   const db = createAdminClient();
 
-  // 1. Fetch all scheduled/live matches with team short names
+  // 1. Fetch all scheduled/live matches with team full names (Swedish)
   const { data: matches, error: matchErr } = await db
     .from("matches")
-    .select("id, scheduled_at, status, home_team:teams!matches_home_team_id_fkey(short_name), away_team:teams!matches_away_team_id_fkey(short_name)")
+    .select("id, scheduled_at, status, home_team:teams!matches_home_team_id_fkey(name), away_team:teams!matches_away_team_id_fkey(name)")
     .in("status", ["scheduled", "live"]);
 
   if (matchErr || !matches) {
@@ -56,15 +57,17 @@ export async function syncOdds(): Promise<SyncResult> {
     id: string;
     scheduled_at: string;
     status: string;
-    home_team: { short_name: string } | null;
-    away_team: { short_name: string } | null;
+    home_team: { name: string } | null;
+    away_team: { name: string } | null;
   }>).map((m) => ({
     id:           m.id,
     scheduled_at: m.scheduled_at,
     status:       m.status,
-    home_short:   m.home_team?.short_name ?? null,
-    away_short:   m.away_team?.short_name ?? null,
+    home_name:    m.home_team?.name ?? null,
+    away_name:    m.away_team?.name ?? null,
   }));
+
+  console.log(`[sync/odds] Loaded ${internalMatches.length} internal matches from DB`);
 
   // 2. Fetch match_ids where admin has set odds — skip these during sync
   const { data: adminOddsRows } = await db
@@ -87,31 +90,39 @@ export async function syncOdds(): Promise<SyncResult> {
   }
 
   result.processed = events.length;
+  console.log(`[sync/odds] Fetched ${events.length} events from The Odds API`);
 
   // 4. Process each event
   for (const event of events) {
-    const homeShort = resolveTeamShortName(event.home_team);
-    const awayShort = resolveTeamShortName(event.away_team);
+    const homeDbName = resolveTeamDbName(event.home_team);
+    const awayDbName = resolveTeamDbName(event.away_team);
 
-    if (!homeShort || !awayShort) {
-      result.errors.push(
-        `Unknown team names: "${event.home_team}" / "${event.away_team}"`
-      );
+    if (!homeDbName || !awayDbName) {
+      const missing = [
+        !homeDbName ? `"${event.home_team}"` : null,
+        !awayDbName ? `"${event.away_team}"` : null,
+      ].filter(Boolean).join(", ");
+      console.warn(`[sync/odds] Unknown team name(s): ${missing} — skipping event`);
+      result.errors.push(`Unknown team name(s): ${missing}`);
       result.skipped++;
       continue;
     }
 
-    // Find matching internal match
+    // Find matching internal match by Swedish name pair + date window
     const internalMatch = internalMatches.find(
       (m) =>
-        m.home_short === homeShort &&
-        m.away_short === awayShort &&
+        m.home_name === homeDbName &&
+        m.away_name === awayDbName &&
         datesWithinTolerance(m.scheduled_at, event.commence_time)
     );
 
     if (!internalMatch) {
+      console.warn(
+        `[sync/odds] No DB match for "${homeDbName}" vs "${awayDbName}" ` +
+        `at ${event.commence_time} (API: "${event.home_team}" vs "${event.away_team}")`
+      );
       result.errors.push(
-        `No internal match for ${homeShort} vs ${awayShort} at ${event.commence_time}`
+        `No internal match for "${homeDbName}" vs "${awayDbName}" at ${event.commence_time}`
       );
       result.skipped++;
       continue;
@@ -126,6 +137,7 @@ export async function syncOdds(): Promise<SyncResult> {
     // Aggregate odds from bookmakers
     const odds = aggregateH2HOdds(event);
     if (!odds) {
+      console.warn(`[sync/odds] No complete h2h market for "${homeDbName}" vs "${awayDbName}"`);
       result.skipped++;
       continue;
     }
@@ -153,6 +165,7 @@ export async function syncOdds(): Promise<SyncResult> {
       continue;
     }
 
+    console.log(`[sync/odds] Updated odds for "${homeDbName}" vs "${awayDbName}"`);
     result.updated++;
   }
 

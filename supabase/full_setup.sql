@@ -1932,3 +1932,35 @@ where
     select 1 from special_bets sb
     where sb.league_member_id = lm.id and sb.status not in ('cancelled')
   );
+
+-- ============================================================
+-- Table GRANTs — service_role (cron/admin) + authenticated (users)
+-- ============================================================
+
+grant usage  on schema public                    to service_role;
+grant all    on all tables    in schema public   to service_role;
+grant all    on all sequences in schema public   to service_role;
+
+grant usage  on schema public                    to authenticated;
+grant select on matches, teams, tournaments      to authenticated;
+grant select on leagues, league_members          to authenticated;
+grant select on profiles, invite_whitelist       to authenticated;
+grant select on match_odds                       to authenticated;
+grant select, insert, update, delete
+  on bet_slips, bet_slip_selections              to authenticated;
+grant select, insert
+  on match_wallet_transactions                   to authenticated;
+grant select on special_markets                  to authenticated;
+grant select, insert, update, delete
+  on special_bets                                to authenticated;
+grant select, insert
+  on special_wallet_transactions                 to authenticated;
+grant select, insert
+  on audit_log                                   to authenticated;
+
+alter default privileges in schema public
+  grant all on tables    to service_role;
+alter default privileges in schema public
+  grant all on sequences to service_role;
+alter default privileges in schema public
+  grant select on tables to authenticated;
