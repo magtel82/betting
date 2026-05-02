@@ -12,6 +12,7 @@
 // CRON_SECRET finns i Vercel Dashboard → Settings → Environment Variables.
 
 import { syncResults } from "@/lib/sync/results";
+import { writeSyncLog } from "@/lib/sync/log";
 
 // Vercel Pro: upp till 300 s. Sätt 60 s för säkerhetsmarginal.
 export const maxDuration = 60;
@@ -27,8 +28,18 @@ async function handleSync(request: Request): Promise<Response> {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const startedAt = Date.now();
   try {
     const result = await syncResults();
+    const durationMs = Date.now() - startedAt;
+    console.log(
+      `[sync/results] Done — updated=${result.updated} skipped=${result.skipped} ` +
+      `errors=${result.errors.length} processed=${result.processed} duration=${durationMs}ms`
+    );
+    if (result.errors.length > 0) {
+      console.error("[sync/results] Errors:\n" + result.errors.join("\n"));
+    }
+    await writeSyncLog("results", result, durationMs);
     const httpStatus =
       result.updated > 0 || result.errors.length === 0 ? 200 : 500;
     return Response.json(result, { status: httpStatus });

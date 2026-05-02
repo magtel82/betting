@@ -8,6 +8,7 @@ import { AuditLogSection } from "./_components/AuditLogSection";
 import { MatchOddsForm } from "./_components/MatchOddsForm";
 import { MatchResultForm } from "./_components/MatchResultForm";
 import { SyncPanel } from "./_components/SyncPanel";
+import { SyncHistorySection, type SyncLogRow } from "./_components/SyncHistorySection";
 import { SettlePanel } from "./_components/SettlePanel";
 import { EconomyPanel } from "./_components/EconomyPanel";
 import { SpecialOddsForm } from "./_components/SpecialOddsForm";
@@ -27,7 +28,7 @@ export default async function AdminPage() {
   const { supabase, user, member } = await requireAdmin();
   const leagueId = member.league_id;
 
-  const [membersRes, whitelistRes, leagueRes, auditRes, matchesRes, settleMatchesRes] =
+  const [membersRes, whitelistRes, leagueRes, auditRes, matchesRes, settleMatchesRes, syncLogRes] =
     await Promise.all([
       supabase
         .from("league_members")
@@ -65,6 +66,12 @@ export default async function AdminPage() {
         .in("status", ["finished", "void"])
         .order("scheduled_at", { ascending: false })
         .limit(30),
+      // Sync history — last 20 entries (10 per type shown in UI)
+      supabase
+        .from("sync_log")
+        .select("id, type, ran_at, processed, updated, skipped, errors, duration_ms")
+        .order("ran_at", { ascending: false })
+        .limit(20),
     ]);
 
   const members = (membersRes.data ?? []) as LeagueMemberWithProfile[];
@@ -121,6 +128,7 @@ export default async function AdminPage() {
   }));
 
   const settleMatches = (settleMatchesRes.data ?? []) as MatchWithTeams[];
+  const syncLogs = (syncLogRes.data ?? []) as unknown as SyncLogRow[];
 
   // Today's date in Swedish time, for the inactivity fee date picker default
   const todaySwedish = new Intl.DateTimeFormat("sv-SE", {
@@ -151,6 +159,9 @@ export default async function AdminPage() {
 
         {/* Manuell sync */}
         <SyncPanel />
+
+        {/* Sync-historik */}
+        <SyncHistorySection logs={syncLogs} />
 
         {/* Settlement */}
         {settleMatches.length > 0 && (

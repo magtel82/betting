@@ -15,6 +15,7 @@
 // CRON_SECRET finns i Vercel Dashboard → Settings → Environment Variables.
 
 import { syncOdds } from "@/lib/sync/odds";
+import { writeSyncLog } from "@/lib/sync/log";
 import { fetchAvailableSports, SPORT_KEY, OddsApiError } from "@/lib/adapters/odds-api";
 import { inspectAdminKey } from "@/lib/supabase/admin";
 
@@ -147,17 +148,18 @@ async function handleSync(request: Request): Promise<Response> {
     "| prefix:", keyInfo.prefix
   );
 
+  const startedAt = Date.now();
   try {
     const result = await syncOdds();
+    const durationMs = Date.now() - startedAt;
     console.log(
       `[sync/odds] Done — updated=${result.updated} skipped=${result.skipped} ` +
-      `errors=${result.errors.length} processed=${result.processed}`
+      `errors=${result.errors.length} processed=${result.processed} duration=${durationMs}ms`
     );
     if (result.errors.length > 0) {
       console.error("[sync/odds] Errors:\n" + result.errors.join("\n"));
     }
-    // HTTP 207 om körningen lyckades delvis (uppdateringar + errors).
-    // HTTP 500 om inget alls uppdaterades och det finns fel.
+    await writeSyncLog("odds", result, durationMs);
     const httpStatus =
       result.updated > 0 || result.errors.length === 0 ? 200 : 500;
     return Response.json(result, { status: httpStatus });
