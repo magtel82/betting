@@ -4,7 +4,7 @@ import type { SyncResult } from "./types";
 // Writes one row to sync_log. Non-fatal — a logging failure must never
 // cause the sync itself to fail or throw.
 export async function writeSyncLog(
-  type: "odds" | "results",
+  type: "odds" | "results" | "outrights",
   result: SyncResult,
   durationMs: number
 ): Promise<void> {

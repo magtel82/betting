@@ -116,6 +116,7 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
   const isMulti     = slip.selections.length > 1;
   const comboLabel  = COMBO_LABEL[slip.selections.length] ?? `${slip.selections.length}-vägs`;
   const playerName  = slip.member?.profile?.display_name ?? "Okänd";
+  const isCancelled = slip.status === "cancelled";
 
   const isModifiable = useMemo(() => {
     if (slip.status !== "open") return false;
@@ -147,12 +148,14 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
 
   return (
     <article
-      className={`overflow-hidden rounded-xl border bg-white shadow-sm ${
-        isOwn ? "border-[var(--primary)]/30" : "border-gray-200"
+      className={`overflow-hidden rounded-xl border shadow-sm ${
+        isCancelled
+          ? "border-gray-200 bg-gray-50 opacity-70"
+          : `bg-white ${isOwn ? "border-[var(--primary)]/30" : "border-gray-200"}`
       }`}
     >
       {/* Header */}
-      <div className={`flex items-center justify-between gap-2 px-3 py-2 ${isOwn ? "bg-[var(--primary-50)]" : "bg-gray-50"}`}>
+      <div className={`flex items-center justify-between gap-2 px-3 py-2 ${isCancelled ? "bg-gray-100" : isOwn ? "bg-[var(--primary-50)]" : "bg-gray-50"}`}>
         <div className="flex min-w-0 items-center gap-2">
           <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusCls}`}>
             {statusLabel}
@@ -181,13 +184,19 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
           return (
             <li key={sel.id} className="flex items-center justify-between gap-3 py-2.5">
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-gray-900">
-                  <span className="text-base">{home?.flag_emoji}</span> {home?.short_name ?? "?"}
-                  <span className="mx-1 text-gray-300">–</span>
-                  <span className="text-base">{away?.flag_emoji}</span> {away?.short_name ?? "?"}
-                </p>
-                {label && (
-                  <p className="mt-0.5 text-[11px] uppercase tracking-wide text-gray-400">{label}</p>
+                {isCancelled && (!home || !away) ? (
+                  <p className="truncate text-sm font-medium text-gray-400 italic">Ogiltigt slip</p>
+                ) : (
+                  <>
+                    <p className="truncate text-sm font-semibold text-gray-900">
+                      <span className="text-base">{home?.flag_emoji}</span> {home?.short_name ?? "?"}
+                      <span className="mx-1 text-gray-300">–</span>
+                      <span className="text-base">{away?.flag_emoji}</span> {away?.short_name ?? "?"}
+                    </p>
+                    {label && (
+                      <p className="mt-0.5 text-[11px] uppercase tracking-wide text-gray-400">{label}</p>
+                    )}
+                  </>
                 )}
               </div>
 

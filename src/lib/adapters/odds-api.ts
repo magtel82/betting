@@ -119,6 +119,76 @@ export async function fetchAvailableSports(): Promise<{ sports: OddsApiSport[]; 
   return { sports: data as OddsApiSport[], debugUrl };
 }
 
+// ─── Outright odds (VM-vinnare, skyttekung) ───────────────────────────────────
+
+export const WINNER_SPORT_KEY     = "soccer_fifa_world_cup_winner";
+export const GOALSCORER_SPORT_KEY = "soccer_fifa_world_cup";
+
+export async function fetchOutrightOdds(
+  sportKey: string,
+  marketKey: string,
+): Promise<OddsApiEvent[]> {
+  const apiKey = process.env.ODDS_API_KEY;
+  if (!apiKey) throw new OddsApiError(0, "ODDS_API_KEY environment variable is not set");
+
+  const url = new URL(`${BASE_URL}/sports/${sportKey}/odds/`);
+  url.searchParams.set("apiKey", apiKey);
+  url.searchParams.set("regions", "eu");
+  url.searchParams.set("markets", marketKey);
+  url.searchParams.set("oddsFormat", "decimal");
+  url.searchParams.set("dateFormat", "iso");
+
+  const debugUrl =
+    `${BASE_URL}/sports/${sportKey}/odds/?regions=eu&markets=${marketKey}&oddsFormat=decimal`;
+  console.log(`[odds-api] fetchOutrightOdds → ${debugUrl}`);
+
+  const res = await fetch(url.toString(), {
+    next: { revalidate: 0 },
+    headers: { "Accept": "application/json" },
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    const msg = `The Odds API returned ${res.status}: ${body}`;
+    console.error(`[odds-api] fetchOutrightOdds (${sportKey}/${marketKey}) failed — ${msg}`);
+    throw new OddsApiError(res.status, msg);
+  }
+
+  const data = await res.json();
+  if (!Array.isArray(data)) {
+    throw new OddsApiError(0, "Unexpected response shape from The Odds API");
+  }
+  console.log(`[odds-api] fetchOutrightOdds (${sportKey}/${marketKey}) → ${data.length} events`);
+  return data as OddsApiEvent[];
+}
+
+// Average outright odds per selection across all bookmakers and events.
+export function aggregateOutrightOdds(
+  events: OddsApiEvent[],
+  marketKey: string,
+): { selection: string; odds: number }[] {
+  const oddsMap: Record<string, number[]> = {};
+
+  for (const event of events) {
+    for (const bm of event.bookmakers) {
+      const market = bm.markets.find((m) => m.key === marketKey);
+      if (!market) continue;
+      for (const outcome of market.outcomes) {
+        if (!oddsMap[outcome.name]) oddsMap[outcome.name] = [];
+        oddsMap[outcome.name].push(outcome.price);
+      }
+    }
+  }
+
+  const avg = (arr: number[]) =>
+    Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 100) / 100;
+
+  return Object.entries(oddsMap)
+    .map(([selection, prices]) => ({ selection, odds: avg(prices) }))
+    .filter((o) => o.odds > 1.0)
+    .sort((a, b) => a.odds - b.odds);
+}
+
 // ─── Odds aggregation ─────────────────────────────────────────────────────────
 
 // Average h2h odds across all bookmakers for one event.

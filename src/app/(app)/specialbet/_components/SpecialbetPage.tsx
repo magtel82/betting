@@ -246,26 +246,38 @@ function MarketCard({
   activeBet,
   isLocked,
   specialWallet,
+  outrightOdds,
 }: {
   market:        SpecialMarket;
   activeBet:     SpecialBet | null;
   isLocked:      boolean;
   specialWallet: number;
+  outrightOdds:  { selection: string; odds: number }[];
 }) {
-  const isFixed  = market.type === "sverige_mal";
-  const baseOdds = isFixed
-    ? (market.fixed_payout_factor ?? 4.0)
-    : (market.odds ?? null);
+  const isFixed          = market.type === "sverige_mal";
+  const hasOutrightOdds  = outrightOdds.length > 0;
 
-  const [oddsToUse, setOddsToUse] = useState<number | null>(baseOdds);
-  const [state, action] = useActionState<PlaceActionState, FormData>(
-    placeSpecialBetAction,
-    null,
-  );
+  // For variable markets without outright table, fall back to single market odds
+  const marketOdds = isFixed ? (market.fixed_payout_factor ?? 4.0) : (market.odds ?? null);
 
+  // Initial odds: for outright markets, derive from active bet's selection; else use market odds
+  const initialOdds = (() => {
+    if (isFixed) return marketOdds;
+    if (hasOutrightOdds) {
+      const sel = activeBet?.selection_text ?? "";
+      return outrightOdds.find((o) => o.selection === sel)?.odds ?? null;
+    }
+    return marketOdds;
+  })();
+
+  const [oddsToUse,          setOddsToUse]          = useState<number | null>(initialOdds);
+  const [selectedOutright,   setSelectedOutright]   = useState<string>(activeBet?.selection_text ?? "");
+  const [state, action] = useActionState<PlaceActionState, FormData>(placeSpecialBetAction, null);
+
+  // Keep non-outright market odds in sync if they change (e.g. admin update + page refresh)
   useEffect(() => {
-    setOddsToUse(baseOdds);
-  }, [baseOdds]);
+    if (!hasOutrightOdds) setOddsToUse(marketOdds);
+  }, [hasOutrightOdds, marketOdds]);
 
   const oddsChangedState =
     state?.ok === false && state.code === "odds_changed" ? state : null;
@@ -276,6 +288,12 @@ function MarketCard({
     }
   }
 
+  function handleOutrightChange(selection: string) {
+    setSelectedOutright(selection);
+    const odds = outrightOdds.find((o) => o.selection === selection)?.odds ?? null;
+    setOddsToUse(odds);
+  }
+
   const [stakeInput, setStakeInput] = useState("");
   const stakeNum        = parseInt(stakeInput, 10);
   const validStake      = !isNaN(stakeNum) && stakeNum >= 100;
@@ -284,7 +302,7 @@ function MarketCard({
 
   const { title, description, inputLabel, inputPlaceholder } = MARKET_META[market.type];
 
-  const hasNoOdds    = !isFixed && baseOdds == null;
+  const hasNoOdds    = !isFixed && !hasOutrightOdds && marketOdds == null;
   const formDisabled = isLocked || hasNoOdds;
 
   return (
@@ -297,9 +315,14 @@ function MarketCard({
             Fast utbetalning: 4× insats
           </p>
         )}
-        {!isFixed && baseOdds != null && (
+        {!isFixed && hasOutrightOdds && (
           <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[var(--primary-50)] px-2 py-0.5 text-[11px] font-semibold text-[var(--primary)]">
-            Odds: {Number(baseOdds).toFixed(2)}
+            {outrightOdds.length} alternativ · odds varierar
+          </p>
+        )}
+        {!isFixed && !hasOutrightOdds && marketOdds != null && (
+          <p className="mt-1 inline-flex items-center gap-1 rounded-full bg-[var(--primary-50)] px-2 py-0.5 text-[11px] font-semibold text-[var(--primary)]">
+            Odds: {Number(marketOdds).toFixed(2)}
           </p>
         )}
         {hasNoOdds && (
@@ -337,7 +360,31 @@ function MarketCard({
                   />
                   <p className="text-xs text-gray-400">(0–12 mål)</p>
                 </>
+              ) : hasOutrightOdds ? (
+                // Outright picker: dropdown with per-selection odds
+                <>
+                  <select
+                    name="selection_text"
+                    required
+                    value={selectedOutright}
+                    onChange={(e) => handleOutrightChange(e.target.value)}
+                    className="h-12 w-full rounded-lg border border-gray-200 bg-white px-3.5 text-sm text-gray-900 focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
+                  >
+                    <option value="" disabled>— Välj alternativ —</option>
+                    {outrightOdds.map(({ selection, odds }) => (
+                      <option key={selection} value={selection}>
+                        {selection} ({odds.toFixed(2)})
+                      </option>
+                    ))}
+                  </select>
+                  {oddsToUse != null && (
+                    <p className="text-xs text-gray-500">
+                      Odds: <strong className="tabular-nums text-[var(--primary)]">{oddsToUse.toFixed(2)}</strong>
+                    </p>
+                  )}
+                </>
               ) : (
+                // Free-text fallback (no outright odds synced yet)
                 <input
                   type="text"
                   name="selection_text"
@@ -533,13 +580,14 @@ const MARKET_META: Record<
 // ─── SpecialbetPage ───────────────────────────────────────────────────────────
 
 interface Props {
-  specialWallet: number;
-  deadline:      string | null;
-  deadlinePassed: boolean;
-  isAdmin:       boolean;
-  markets:       SpecialMarket[];
-  activeBets:    SpecialBet[];
-  othersReveal:  OtherBetEntry[] | null;
+  specialWallet:        number;
+  deadline:             string | null;
+  deadlinePassed:       boolean;
+  isAdmin:              boolean;
+  markets:              SpecialMarket[];
+  activeBets:           SpecialBet[];
+  othersReveal:         OtherBetEntry[] | null;
+  outrightOddsByMarket: Record<string, { selection: string; odds: number }[]>;
 }
 
 const MARKET_ORDER: SpecialMarketType[] = ["vm_vinnare", "skyttekung", "sverige_mal"];
@@ -552,6 +600,7 @@ export function SpecialbetPage({
   markets,
   activeBets,
   othersReveal,
+  outrightOddsByMarket,
 }: Props) {
   const isLocked = isDeadlinePassed(deadline);
 
@@ -567,7 +616,8 @@ export function SpecialbetPage({
         const market = marketByType.get(type);
         if (!market) return null;
 
-        const activeBet = betByMarket.get(market.id) ?? null;
+        const activeBet    = betByMarket.get(market.id) ?? null;
+        const outrightOdds = outrightOddsByMarket[market.id] ?? [];
         return (
           <MarketCard
             key={market.id}
@@ -575,6 +625,7 @@ export function SpecialbetPage({
             activeBet={activeBet}
             isLocked={isLocked}
             specialWallet={specialWallet}
+            outrightOdds={outrightOdds}
           />
         );
       })}

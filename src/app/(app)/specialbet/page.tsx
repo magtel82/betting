@@ -48,6 +48,8 @@ export default async function SpecialbetRoute() {
       .eq("status", "active"),
   ]);
 
+  const markets = (marketsRes.data ?? []) as SpecialMarket[];
+
   const deadline =
     (tournamentRes.data as { special_bets_deadline: string | null } | null)
       ?.special_bets_deadline ?? null;
@@ -56,7 +58,20 @@ export default async function SpecialbetRoute() {
   const deadlinePassed = deadline != null && new Date() >= new Date(deadline);
   const shouldReveal = isAdmin || deadlinePassed;
 
-  const markets = (marketsRes.data ?? []) as SpecialMarket[];
+  // ── Outright odds (per-selection) for vm_vinnare / skyttekung ──────────────
+  const { data: outrightOddsData } = markets.length > 0
+    ? await supabase
+        .from("outright_odds")
+        .select("market_id, selection, odds")
+        .in("market_id", markets.map((m) => m.id))
+        .order("odds", { ascending: true })
+    : { data: [] as { market_id: string; selection: string; odds: number }[] };
+
+  const outrightOddsByMarket: Record<string, { selection: string; odds: number }[]> = {};
+  for (const row of (outrightOddsData ?? [])) {
+    if (!outrightOddsByMarket[row.market_id]) outrightOddsByMarket[row.market_id] = [];
+    outrightOddsByMarket[row.market_id].push({ selection: row.selection, odds: Number(row.odds) });
+  }
 
   // ── Reveal: load other members' active bets after deadline (or for admin) ──
   let othersReveal: OtherBetEntry[] | null = null;
@@ -125,6 +140,7 @@ export default async function SpecialbetRoute() {
         markets={markets}
         activeBets={(betsRes.data ?? []) as SpecialBet[]}
         othersReveal={othersReveal}
+        outrightOddsByMarket={outrightOddsByMarket}
       />
     </>
   );

@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncOdds } from "@/lib/sync/odds";
 import { syncResults } from "@/lib/sync/results";
+import { syncOutrights } from "@/lib/sync/outrights";
+import { writeSyncLog } from "@/lib/sync/log";
 import { settleMatch, type SettleMatchResult }     from "@/lib/betting/settle-match";
 import { lockStartedSlips, type LockSlipsResult }   from "@/lib/betting/lock-slips";
 import { applyInactivityFee, type ApplyInactivityFeeResult } from "@/lib/betting/inactivity-fee";
@@ -340,14 +342,19 @@ export async function runOddsSync(
   const ctx = await getAdminContext();
   if (!ctx) return { error: "Ingen behörighet" };
 
+  const startedAt = Date.now();
   try {
     const result = await syncOdds();
-    await writeAuditLog(ctx.supabase, ctx.user.id, "sync_odds_manual", "match_odds", null, {
-      processed: result.processed,
-      updated: result.updated,
-      skipped: result.skipped,
-      errors: result.errors,
-    });
+    const durationMs = Date.now() - startedAt;
+    await Promise.all([
+      writeAuditLog(ctx.supabase, ctx.user.id, "sync_odds_manual", "match_odds", null, {
+        processed: result.processed,
+        updated: result.updated,
+        skipped: result.skipped,
+        errors: result.errors,
+      }),
+      writeSyncLog("odds", result, durationMs),
+    ]);
     const parts: string[] = [`${result.updated} uppdaterade`];
     if (result.skipped > 0) parts.push(`${result.skipped} hoppade`);
     if (result.errors.length > 0) parts.push(`${result.errors.length} fel`);
@@ -364,20 +371,54 @@ export async function runResultsSync(
   const ctx = await getAdminContext();
   if (!ctx) return { error: "Ingen behörighet" };
 
+  const startedAt = Date.now();
   try {
     const result = await syncResults();
-    await writeAuditLog(ctx.supabase, ctx.user.id, "sync_results_manual", "matches", null, {
-      processed: result.processed,
-      updated: result.updated,
-      skipped: result.skipped,
-      errors: result.errors,
-    });
+    const durationMs = Date.now() - startedAt;
+    await Promise.all([
+      writeAuditLog(ctx.supabase, ctx.user.id, "sync_results_manual", "matches", null, {
+        processed: result.processed,
+        updated: result.updated,
+        skipped: result.skipped,
+        errors: result.errors,
+      }),
+      writeSyncLog("results", result, durationMs),
+    ]);
     const parts: string[] = [`${result.updated} uppdaterade`];
     if (result.skipped > 0) parts.push(`${result.skipped} hoppade`);
     if (result.errors.length > 0) parts.push(`${result.errors.length} fel`);
     return { success: `Resultat-sync klar: ${parts.join(", ")} (av ${result.processed} totalt)` };
   } catch (err) {
     return { error: `Resultat-sync misslyckades: ${String(err)}` };
+  }
+}
+
+export async function runOutrightsSyncAction(
+  _prev: ActionState,
+  _formData: FormData
+): Promise<ActionState> {
+  const ctx = await getAdminContext();
+  if (!ctx) return { error: "Ingen behörighet" };
+
+  const startedAt = Date.now();
+  try {
+    const result = await syncOutrights();
+    const durationMs = Date.now() - startedAt;
+    await Promise.all([
+      writeAuditLog(ctx.supabase, ctx.user.id, "sync_outrights_manual", "outright_odds", null, {
+        processed: result.processed,
+        updated: result.updated,
+        skipped: result.skipped,
+        errors: result.errors,
+      }),
+      writeSyncLog("outrights", result, durationMs),
+    ]);
+    const parts: string[] = [`${result.updated} uppdaterade`];
+    if (result.skipped > 0) parts.push(`${result.skipped} hoppade`);
+    if (result.errors.length > 0) parts.push(`${result.errors.length} fel`);
+    return { success: `Specialbet-sync klar: ${parts.join(", ")} (av ${result.processed} marknader)` };
+  } catch (err) {
+    return { error: `Specialbet-sync misslyckades: ${String(err)}` };
   }
 }
 

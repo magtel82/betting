@@ -7,8 +7,7 @@ import { CreateUserForm } from "./_components/CreateUserForm";
 import { AuditLogSection } from "./_components/AuditLogSection";
 import { MatchOddsForm } from "./_components/MatchOddsForm";
 import { MatchResultForm } from "./_components/MatchResultForm";
-import { SyncPanel } from "./_components/SyncPanel";
-import { SyncHistorySection, type SyncLogRow } from "./_components/SyncHistorySection";
+import { SyncStatusSection, type SyncLogRow } from "./_components/SyncStatusSection";
 import { SettlePanel } from "./_components/SettlePanel";
 import { EconomyPanel } from "./_components/EconomyPanel";
 import { SpecialOddsForm } from "./_components/SpecialOddsForm";
@@ -157,11 +156,8 @@ export default async function AdminPage() {
           tournament={leagueWithTournament.tournament}
         />
 
-        {/* Manuell sync */}
-        <SyncPanel />
-
-        {/* Sync-historik */}
-        <SyncHistorySection logs={syncLogs} />
+        {/* Sync & Status */}
+        <SyncStatusSection initialLogs={syncLogs} />
 
         {/* Settlement */}
         {settleMatches.length > 0 && (
