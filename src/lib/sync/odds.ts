@@ -96,6 +96,20 @@ export async function syncOdds(): Promise<SyncResult> {
   result.processed = events.length;
   console.log(`[sync/odds] Fetched ${events.length} events from The Odds API`);
 
+  // Debug: log first 5 events so we can verify name resolution + date shape
+  for (const ev of events.slice(0, 5)) {
+    const h = resolveTeamDbName(ev.home_team);
+    const a = resolveTeamDbName(ev.away_team);
+    const dbMatch = internalMatches.find(
+      (m) => m.home_name === h && m.away_name === a
+    );
+    console.log(
+      `[sync/odds] SAMPLE api="${ev.home_team}" vs "${ev.away_team}" ` +
+      `→ db="${h ?? "??"}" vs "${a ?? "??"}" | api_date=${ev.commence_time.slice(0, 10)} ` +
+      `db_date=${dbMatch?.scheduled_at?.slice(0, 10) ?? "(no name match)"}`
+    );
+  }
+
   // 4. Process each event
   for (const event of events) {
     const homeDbName = resolveTeamDbName(event.home_team);
@@ -112,14 +126,32 @@ export async function syncOdds(): Promise<SyncResult> {
       continue;
     }
 
-    // Find matching internal match by Swedish name pair + same calendar date.
-    // Time is intentionally ignored — DB may have placeholder kickoff times.
-    const internalMatch = internalMatches.find(
+    // Primary: match by Swedish team names + same UTC calendar date.
+    // This handles placeholder *times* in the DB (e.g. 16:00 vs 19:00).
+    let internalMatch = internalMatches.find(
       (m) =>
         m.home_name === homeDbName &&
         m.away_name === awayDbName &&
         sameCalendarDate(m.scheduled_at, event.commence_time)
     );
+
+    // Fallback: WC matches in North America can cross a UTC date boundary
+    // (21:00 EDT = 01:00 UTC next day). If seed dates are off by ±1 day,
+    // or seed has placeholder dates entirely, match by team names alone —
+    // but only when exactly one such pair exists (prevents group+knockout clash).
+    if (!internalMatch) {
+      const nameCandidates = internalMatches.filter(
+        (m) => m.home_name === homeDbName && m.away_name === awayDbName
+      );
+      if (nameCandidates.length === 1) {
+        internalMatch = nameCandidates[0];
+        console.warn(
+          `[sync/odds] Date mismatch for "${homeDbName}" vs "${awayDbName}": ` +
+          `DB has ${internalMatch.scheduled_at.slice(0, 10)}, ` +
+          `API has ${event.commence_time.slice(0, 10)} — using name-only fallback`
+        );
+      }
+    }
 
     if (!internalMatch) {
       console.warn(
