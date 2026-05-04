@@ -9,90 +9,96 @@
 //   teams.name (used by odds sync via The Odds API which returns English
 //   names and we match against teams.name).
 //
+// Groups reflect the official FIFA VM 2026 draw.
 // Add new spelling variants by adding extra keys pointing to the same value.
 
 // ─── English → 3-letter short_name ───────────────────────────────────────────
 
 export const TEAM_NAME_TO_SHORT: Record<string, string> = {
   // ── Grupp A ──────────────────────────────────────────────────────────────
-  "USA":                  "USA",
-  "United States":        "USA",
-  "United States of America": "USA",
-  "Panama":               "PAN",
-  "Albania":              "ALB",
-  "Ukraine":              "UKR",
+  "Czech Republic":           "CZE",
+  "Czechia":                  "CZE",
+  "South Korea":              "KOR",
+  "Korea Republic":           "KOR",
+  "Republic of Korea":        "KOR",
+  "Mexico":                   "MEX",
+  "South Africa":             "RSA",
 
   // ── Grupp B ──────────────────────────────────────────────────────────────
-  "Argentina":            "ARG",
-  "Chile":                "CHI",
-  "Peru":                 "PER",
-  "New Zealand":          "NZL",
+  "Bosnia & Herzegovina":     "BIH",
+  "Bosnia and Herzegovina":   "BIH",
+  "Canada":                   "CAN",
+  "Qatar":                    "QAT",
+  "Switzerland":              "SUI",
 
   // ── Grupp C ──────────────────────────────────────────────────────────────
-  "Mexico":               "MEX",
-  "Jamaica":              "JAM",
-  "Venezuela":            "VEN",
-  "Honduras":             "HON",
+  "Brazil":                   "BRA",
+  "Haiti":                    "HAI",
+  "Morocco":                  "MAR",
+  "Scotland":                 "SCO",
 
   // ── Grupp D ──────────────────────────────────────────────────────────────
-  "Spain":                "ESP",
-  "Brazil":               "BRA",
-  "Japan":                "JPN",
-  "Morocco":              "MAR",
+  "Australia":                "AUS",
+  "Paraguay":                 "PAR",
+  "Turkey":                   "TUR",
+  "Türkiye":                  "TUR",
+  "USA":                      "USA",
+  "United States":            "USA",
+  "United States of America": "USA",
 
   // ── Grupp E ──────────────────────────────────────────────────────────────
-  "France":               "FRA",
-  "Croatia":              "CRO",
-  "Serbia":               "SRB",
-  "Ecuador":              "ECU",
+  "Ivory Coast":              "CIV",
+  "Côte d'Ivoire":            "CIV",
+  "Cote d'Ivoire":            "CIV",
+  "Curaçao":                  "CUW",
+  "Curacao":                  "CUW",
+  "Ecuador":                  "ECU",
+  "Germany":                  "GER",
 
   // ── Grupp F ──────────────────────────────────────────────────────────────
-  "England":              "ENG",
-  "Colombia":             "COL",
-  "Senegal":              "SEN",
-  "Paraguay":             "PAR",
+  "Japan":                    "JPN",
+  "Netherlands":              "NED",
+  "Sweden":                   "SWE",
+  "Tunisia":                  "TUN",
 
   // ── Grupp G ──────────────────────────────────────────────────────────────
-  "Germany":              "GER",
-  "Portugal":             "POR",
-  "South Korea":          "KOR",
-  "Korea Republic":       "KOR",
-  "Republic of Korea":    "KOR",
-  "Costa Rica":           "CRC",
+  "Belgium":                  "BEL",
+  "Egypt":                    "EGY",
+  "Iran":                     "IRN",
+  "IR Iran":                  "IRN",
+  "New Zealand":              "NZL",
 
   // ── Grupp H ──────────────────────────────────────────────────────────────
-  "Netherlands":          "NED",
-  "Uruguay":              "URU",
-  "Nigeria":              "NGA",
-  "Austria":              "AUT",
+  "Cape Verde":               "CPV",
+  "Spain":                    "ESP",
+  "Saudi Arabia":             "KSA",
+  "Uruguay":                  "URU",
 
   // ── Grupp I ──────────────────────────────────────────────────────────────
-  "Sweden":               "SWE",
-  "Switzerland":          "SUI",
-  "Ivory Coast":          "CIV",
-  "Côte d'Ivoire":        "CIV",
-  "Cote d'Ivoire":        "CIV",
-  "Australia":            "AUS",
+  "France":                   "FRA",
+  "Iraq":                     "IRQ",
+  "Norway":                   "NOR",
+  "Senegal":                  "SEN",
 
   // ── Grupp J ──────────────────────────────────────────────────────────────
-  "Canada":               "CAN",
-  "Egypt":                "EGY",
-  "Iran":                 "IRN",
-  "IR Iran":              "IRN",
-  "Ghana":                "GHA",
+  "Algeria":                  "ALG",
+  "Argentina":                "ARG",
+  "Austria":                  "AUT",
+  "Jordan":                   "JOR",
 
   // ── Grupp K ──────────────────────────────────────────────────────────────
-  "Italy":                "ITA",
-  "Denmark":              "DEN",
-  "Turkey":               "TUR",
-  "Türkiye":              "TUR",
-  "Poland":               "POL",
+  "DR Congo":                 "COD",
+  "Congo DR":                 "COD",
+  "Democratic Republic of Congo": "COD",
+  "Colombia":                 "COL",
+  "Portugal":                 "POR",
+  "Uzbekistan":               "UZB",
 
   // ── Grupp L ──────────────────────────────────────────────────────────────
-  "Belgium":              "BEL",
-  "Tunisia":              "TUN",
-  "Saudi Arabia":         "KSA",
-  "South Africa":         "RSA",
+  "Croatia":                  "CRO",
+  "England":                  "ENG",
+  "Ghana":                    "GHA",
+  "Panama":                   "PAN",
 };
 
 // Case-insensitive lookup.
@@ -111,99 +117,91 @@ export function resolveTeamShortName(apiName: string): string | null {
 
 export const TEAM_NAME_TO_DB: Record<string, string> = {
   // ── Grupp A ──────────────────────────────────────────────────────────────
-  "USA":                       "USA",
-  "United States":             "USA",
-  "United States of America":  "USA",
-  "Panama":                    "Panama",
-  "Albania":                   "Albanien",
-  "Ukraine":                   "Ukraina",
-
-  // ── Grupp B ──────────────────────────────────────────────────────────────
-  "Argentina":                 "Argentina",
-  "Chile":                     "Chile",
-  "Peru":                      "Peru",
-  "New Zealand":               "Nya Zeeland",
-
-  // ── Grupp C ──────────────────────────────────────────────────────────────
-  "Mexico":                    "Mexiko",
-  "Jamaica":                   "Jamaica",
-  "Venezuela":                 "Venezuela",
-  "Honduras":                  "Honduras",
-
-  // ── Grupp D ──────────────────────────────────────────────────────────────
-  "Spain":                     "Spanien",
-  "Brazil":                    "Brasilien",
-  "Japan":                     "Japan",
-  "Morocco":                   "Marocko",
-
-  // ── Grupp E ──────────────────────────────────────────────────────────────
-  "France":                    "Frankrike",
-  "Croatia":                   "Kroatien",
-  "Serbia":                    "Serbien",
-  "Ecuador":                   "Ecuador",
-
-  // ── Grupp F ──────────────────────────────────────────────────────────────
-  "England":                   "England",
-  "Colombia":                  "Colombia",
-  "Senegal":                   "Senegal",
-  "Paraguay":                  "Paraguay",
-
-  // ── Grupp G ──────────────────────────────────────────────────────────────
-  "Germany":                   "Tyskland",
-  "Portugal":                  "Portugal",
+  "Czech Republic":            "Tjeckien",
+  "Czechia":                   "Tjeckien",
   "South Korea":               "Sydkorea",
   "Korea Republic":            "Sydkorea",
   "Republic of Korea":         "Sydkorea",
-  "Costa Rica":                "Costa Rica",
+  "Mexico":                    "Mexiko",
+  "South Africa":              "Sydafrika",
 
-  // ── Grupp H ──────────────────────────────────────────────────────────────
-  "Netherlands":               "Nederländerna",
-  "Uruguay":                   "Uruguay",
-  "Nigeria":                   "Nigeria",
-  "Austria":                   "Österrike",
-
-  // ── Grupp I ──────────────────────────────────────────────────────────────
-  "Sweden":                    "Sverige",
+  // ── Grupp B ──────────────────────────────────────────────────────────────
+  "Bosnia & Herzegovina":      "Bosnien & Hercegovina",
+  "Bosnia and Herzegovina":    "Bosnien & Hercegovina",
+  "Canada":                    "Kanada",
+  "Qatar":                     "Qatar",
   "Switzerland":               "Schweiz",
+
+  // ── Grupp C ──────────────────────────────────────────────────────────────
+  "Brazil":                    "Brasilien",
+  "Haiti":                     "Haiti",
+  "Morocco":                   "Marocko",
+  "Scotland":                  "Skottland",
+
+  // ── Grupp D ──────────────────────────────────────────────────────────────
+  "Australia":                 "Australien",
+  "Paraguay":                  "Paraguay",
+  "Turkey":                    "Turkiet",
+  "Türkiye":                   "Turkiet",
+  "USA":                       "USA",
+  "United States":             "USA",
+  "United States of America":  "USA",
+
+  // ── Grupp E ──────────────────────────────────────────────────────────────
   "Ivory Coast":               "Elfenbenskusten",
   "Côte d'Ivoire":             "Elfenbenskusten",
   "Cote d'Ivoire":             "Elfenbenskusten",
-  "Australia":                 "Australien",
+  "Curaçao":                   "Curaçao",
+  "Curacao":                   "Curaçao",
+  "Ecuador":                   "Ecuador",
+  "Germany":                   "Tyskland",
 
-  // ── Grupp J ──────────────────────────────────────────────────────────────
-  "Canada":                    "Kanada",
+  // ── Grupp F ──────────────────────────────────────────────────────────────
+  "Japan":                     "Japan",
+  "Netherlands":               "Nederländerna",
+  "Sweden":                    "Sverige",
+  "Tunisia":                   "Tunisien",
+
+  // ── Grupp G ──────────────────────────────────────────────────────────────
+  "Belgium":                   "Belgien",
   "Egypt":                     "Egypten",
   "Iran":                      "Iran",
   "IR Iran":                   "Iran",
-  "Ghana":                     "Ghana",
+  "New Zealand":               "Nya Zeeland",
 
-  // ── Grupp K ──────────────────────────────────────────────────────────────
-  "Italy":                     "Italien",
-  "Denmark":                   "Danmark",
-  "Turkey":                    "Turkiet",
-  "Türkiye":                   "Turkiet",
-  "Poland":                    "Polen",
-
-  // ── Grupp L ──────────────────────────────────────────────────────────────
-  "Belgium":                   "Belgien",
-  "Tunisia":                   "Tunisien",
-  "Saudi Arabia":              "Saudiarabien",
-  "South Africa":              "Sydafrika",
-
-  // ── Extra lag som API returnerar (ej WC 2026-gruppspel) ──────────────────
-  "Czech Republic":            "Tjeckien",
-  "Bosnia & Herzegovina":      "Bosnien & Hercegovina",
-  "Haiti":                     "Haiti",
-  "Scotland":                  "Skottland",
-  "Curaçao":                   "Curaçao",
+  // ── Grupp H ──────────────────────────────────────────────────────────────
   "Cape Verde":                "Kap Verde",
+  "Spain":                     "Spanien",
+  "Saudi Arabia":              "Saudiarabien",
+  "Uruguay":                   "Uruguay",
+
+  // ── Grupp I ──────────────────────────────────────────────────────────────
+  "France":                    "Frankrike",
   "Iraq":                      "Irak",
   "Norway":                    "Norge",
+  "Senegal":                   "Senegal",
+
+  // ── Grupp J ──────────────────────────────────────────────────────────────
   "Algeria":                   "Algeriet",
+  "Argentina":                 "Argentina",
+  "Austria":                   "Österrike",
   "Jordan":                    "Jordanien",
+
+  // ── Grupp K ──────────────────────────────────────────────────────────────
   "DR Congo":                  "Kongo-Kinshasa",
+  "Congo DR":                  "Kongo-Kinshasa",
+  "Democratic Republic of Congo": "Kongo-Kinshasa",
+  "Colombia":                  "Colombia",
+  "Portugal":                  "Portugal",
   "Uzbekistan":                "Uzbekistan",
-  "Qatar":                     "Qatar",
+
+  // ── Grupp L ──────────────────────────────────────────────────────────────
+  "Croatia":                   "Kroatien",
+  "England":                   "England",
+  "Ghana":                     "Ghana",
+  "Panama":                    "Panama",
+
+  // ── Extra stavningar som API kan returnera ────────────────────────────────
   "Kosovo":                    "Kosovo",
 };
 
@@ -222,7 +220,7 @@ export function resolveTeamDbName(apiName: string): string | null {
 
 // Returns true if two ISO timestamps are within toleranceMs of each other.
 // Used by results sync where both sides have accurate times.
-const MATCH_DATE_TOLERANCE_MS = 4 * 60 * 60 * 1000; // 4 hours
+const MATCH_DATE_TOLERANCE_MS = 36 * 60 * 60 * 1000; // 36 h — placeholder times are 12:00 UTC; WC 2026 NA kick-offs reach 02:00 UTC next day
 
 export function datesWithinTolerance(a: string, b: string): boolean {
   const diff = Math.abs(new Date(a).getTime() - new Date(b).getTime());

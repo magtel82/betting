@@ -602,6 +602,113 @@ export async function applyGroupBonusAction(): Promise<GroupBonusResult> {
   return result;
 }
 
+// ─── Top scorer (skyttekung) management ──────────────────────────────────────
+// Admin manages the list of players + per-player odds stored in outright_odds.
+// These are served to /specialbet as the picker for the skyttekung market.
+// Entries with source='admin' are never overwritten by the API outrights sync.
+
+export async function importTopScorersAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const ctx = await getAdminContext();
+  if (!ctx) return { error: "Ingen behörighet" };
+
+  const marketId = (formData.get("market_id") as string | null)?.trim();
+  const rawText  = (formData.get("players")   as string | null) ?? "";
+
+  if (!marketId) return { error: "Marknad saknas" };
+
+  const lines = rawText.split("\n").map((l) => l.trim()).filter(Boolean);
+  if (lines.length === 0) return { error: "Klistra in minst en rad" };
+
+  const rows: { market_id: string; selection: string; odds: number; source: string; synced_at: string }[] = [];
+  const parseErrors: string[] = [];
+
+  for (const line of lines) {
+    const sep = line.indexOf("|");
+    if (sep === -1) { parseErrors.push(`Saknar |: "${line}"`); continue; }
+    const name  = line.slice(0, sep).trim();
+    const odds  = parseFloat(line.slice(sep + 1).trim());
+    if (!name)            { parseErrors.push(`Tomt namn: "${line}"`);          continue; }
+    if (isNaN(odds) || odds <= 1.0) { parseErrors.push(`Ogiltigt odds: "${line}"`); continue; }
+    rows.push({ market_id: marketId, selection: name, odds, source: "admin", synced_at: new Date().toISOString() });
+  }
+
+  if (rows.length === 0) {
+    return { error: `Inga giltiga rader.${parseErrors.length ? " " + parseErrors.slice(0, 3).join("; ") : ""}` };
+  }
+
+  const db = createAdminClient();
+  const { error } = await db
+    .from("outright_odds")
+    .upsert(rows, { onConflict: "market_id,selection" });
+
+  if (error) return { error: "Kunde inte spara: " + error.message };
+
+  await writeAuditLog(ctx.supabase, ctx.user.id, "top_scorers_import", "outright_odds", marketId, {
+    count: rows.length,
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/specialbet");
+
+  const warn = parseErrors.length > 0 ? ` (${parseErrors.length} rader hoppade)` : "";
+  return { success: `${rows.length} spelare importerade${warn}.` };
+}
+
+export async function removeTopScorerAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const ctx = await getAdminContext();
+  if (!ctx) return { error: "Ingen behörighet" };
+
+  const marketId  = (formData.get("market_id")  as string | null)?.trim();
+  const selection = (formData.get("selection")   as string | null)?.trim();
+
+  if (!marketId || !selection) return { error: "Data saknas" };
+
+  const db = createAdminClient();
+  const { error } = await db
+    .from("outright_odds")
+    .delete()
+    .eq("market_id", marketId)
+    .eq("selection", selection);
+
+  if (error) return { error: "Kunde inte ta bort: " + error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/specialbet");
+  return { success: `${selection} borttagen.` };
+}
+
+export async function clearTopScorersAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const ctx = await getAdminContext();
+  if (!ctx) return { error: "Ingen behörighet" };
+
+  const marketId = (formData.get("market_id") as string | null)?.trim();
+  if (!marketId) return { error: "Marknad saknas" };
+
+  const db = createAdminClient();
+  const { error } = await db
+    .from("outright_odds")
+    .delete()
+    .eq("market_id", marketId)
+    .eq("source", "admin");
+
+  if (error) return { error: "Kunde inte rensa: " + error.message };
+
+  await writeAuditLog(ctx.supabase, ctx.user.id, "top_scorers_clear", "outright_odds", marketId, {});
+
+  revalidatePath("/admin");
+  revalidatePath("/specialbet");
+  return { success: "Skyttekung-listan rensad." };
+}
+
 // ─── Set special market odds ──────────────────────────────────────────────────
 // Upserts the odds for vm_vinnare or skyttekung in special_markets.
 // Not allowed for sverige_mal — that market uses a fixed 4x payout factor.

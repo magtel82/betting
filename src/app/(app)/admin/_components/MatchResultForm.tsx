@@ -59,10 +59,13 @@ export function MatchResultForm({ matches }: Props) {
 
   return (
     <section className="space-y-3">
-      <h2 className="text-base font-semibold text-gray-900">Matchresultat (manuell)</h2>
+      <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[11px] font-bold text-white">1</span>
+        <h2 className="text-base font-semibold text-gray-900">Sätt matchresultat</h2>
+      </div>
       <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
         <p className="text-xs text-gray-500">
-          Rätta matchresultat och status manuellt. Settlement körs separat (fas 6).
+          Välj match, sätt status till <strong>Avslutad</strong> och fyll i resultatet. Gå sedan till <strong>Steg 2</strong> nedan för att avgöra slip.
         </p>
         <form action={action} className="space-y-4">
           {/* Match selector */}

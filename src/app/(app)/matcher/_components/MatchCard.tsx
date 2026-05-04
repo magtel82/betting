@@ -22,12 +22,11 @@ const STAGE_LABEL: Record<string, string> = {
   final:       "Final",
 };
 
-// null label = don't show (scheduled is the default, no badge needed)
-const STATUS_CONFIG: Record<MatchStatus, { label: string | null; cls: string }> = {
-  scheduled: { label: null,            cls: "" },
-  live:      { label: "Pågår",         cls: "text-[var(--win)] font-semibold" },
-  finished:  { label: "Avslutad",      cls: "text-gray-400" },
-  void:      { label: "Ogiltig",       cls: "text-[var(--loss)]" },
+const STATUS_CONFIG: Record<MatchStatus, { label: string | null; cls: string; pill?: boolean }> = {
+  scheduled: { label: null,        cls: "" },
+  live:      { label: "Pågår",     cls: "text-[var(--win)] font-semibold" },
+  finished:  { label: "Avslutad",  cls: "rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500", pill: true },
+  void:      { label: "Ogiltig",   cls: "text-[var(--loss)]" },
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -48,9 +47,10 @@ interface Props {
 }
 
 export function MatchCard({ match }: Props) {
-  const hasScore   = match.home_score !== null && match.away_score !== null;
-  const isLive     = match.status === "live";
-  const { label: statusLabel, cls: statusCls } = STATUS_CONFIG[match.status];
+  const hasScore    = match.home_score !== null && match.away_score !== null;
+  const isLive      = match.status === "live";
+  const isFinished  = match.status === "finished";
+  const { label: statusLabel, cls: statusCls, pill: statusPill } = STATUS_CONFIG[match.status];
 
   const stageLabel =
     match.stage === "group" && match.group_letter
@@ -62,8 +62,10 @@ export function MatchCard({ match }: Props) {
 
   return (
     <div
-      className={`rounded-xl border bg-white p-3 shadow-sm ${
-        isLive ? "border-[var(--win)]/40" : "border-gray-200"
+      className={`rounded-xl border p-3 shadow-sm ${
+        isLive      ? "border-[var(--win)]/40 bg-white" :
+        isFinished  ? "border-gray-200 bg-gray-50/70"   :
+                      "border-gray-200 bg-white"
       }`}
     >
       {/* Top row */}
@@ -74,12 +76,16 @@ export function MatchCard({ match }: Props) {
         <div className="flex shrink-0 items-center gap-2">
           <span className="text-xs text-gray-500">{swTime(match.scheduled_at)}</span>
           {statusLabel && (
-            <span className={`flex items-center gap-1 text-xs ${statusCls}`}>
-              {isLive && (
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--win)] animate-pulse" />
-              )}
-              {statusLabel}
-            </span>
+            statusPill ? (
+              <span className={`text-xs ${statusCls}`}>{statusLabel}</span>
+            ) : (
+              <span className={`flex items-center gap-1 text-xs ${statusCls}`}>
+                {isLive && (
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--win)] animate-pulse" />
+                )}
+                {statusLabel}
+              </span>
+            )
           )}
         </div>
       </div>

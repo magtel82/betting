@@ -12,6 +12,7 @@ import { SettlePanel } from "./_components/SettlePanel";
 import { EconomyPanel } from "./_components/EconomyPanel";
 import { SpecialOddsForm } from "./_components/SpecialOddsForm";
 import { SpecialSettlePanel, type MarketWithBets } from "./_components/SpecialSettlePanel";
+import { TopScorerAdmin, type TopScorerRow } from "./_components/TopScorerAdmin";
 import type {
   League,
   Tournament,
@@ -113,6 +114,22 @@ export default async function AdminPage() {
       .map(([selection_text, count]) => ({ selection_text, count }))
       .sort((a, b) => b.count - a.count),
   }));
+
+  // Fetch top scorer (skyttekung) outright_odds for admin management
+  const skyttekungMarket = specialMarkets.find((m) => m.type === "skyttekung");
+  const { data: skyttekungOddsData } = skyttekungMarket
+    ? await supabase
+        .from("outright_odds")
+        .select("selection, odds, source")
+        .eq("market_id", skyttekungMarket.id)
+        .order("odds", { ascending: true })
+    : { data: [] as { selection: string; odds: number; source: string }[] };
+  const skyttekungPlayers: TopScorerRow[] = (skyttekungOddsData ?? []).map((r) => ({
+    selection: r.selection,
+    odds:      Number(r.odds),
+    source:    r.source,
+  }));
+
   const auditEntries = (auditRes.data ?? []) as (AuditLog & {
     actor: { display_name: string } | null;
   })[];
@@ -159,10 +176,11 @@ export default async function AdminPage() {
         {/* Sync & Status */}
         <SyncStatusSection initialLogs={syncLogs} />
 
-        {/* Settlement */}
-        {settleMatches.length > 0 && (
-          <SettlePanel matches={settleMatches} />
+        {/* Match-settlement: Steg 1 (sätt resultat) + Steg 2 (avgör slip) */}
+        {matchesWithOdds.length > 0 && (
+          <MatchResultForm matches={matchesWithOdds} />
         )}
+        <SettlePanel matches={settleMatches} />
 
         {/* Ekonomi: lås slip, inaktivitetsavgift, gruppbonus */}
         <EconomyPanel defaultFeeDate={todaySwedish} />
@@ -175,6 +193,14 @@ export default async function AdminPage() {
           />
         )}
 
+        {/* Skyttekung-lista */}
+        {skyttekungMarket && (
+          <TopScorerAdmin
+            marketId={skyttekungMarket.id}
+            players={skyttekungPlayers}
+          />
+        )}
+
         {/* Specialbet-settlement */}
         {marketsWithBets.length > 0 && (
           <SpecialSettlePanel markets={marketsWithBets} />
@@ -183,11 +209,6 @@ export default async function AdminPage() {
         {/* Matchodds – manuell fallback */}
         {matchesWithOdds.length > 0 && (
           <MatchOddsForm matches={matchesWithOdds} />
-        )}
-
-        {/* Matchresultat – manuell rättning */}
-        {matchesWithOdds.length > 0 && (
-          <MatchResultForm matches={matchesWithOdds} />
         )}
 
         {/* Spelaröversikt */}

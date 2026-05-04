@@ -143,15 +143,33 @@ async function syncMarketOutrights(
     return { updated: 0, skipped, errors };
   }
 
+  // Protect admin-managed entries — never overwrite source='admin' rows
+  const { data: adminRows } = await db
+    .from("outright_odds")
+    .select("selection")
+    .eq("market_id", marketId)
+    .eq("source", "admin");
+  const adminProtected = new Set(
+    (adminRows ?? []).map((r: { selection: string }) => r.selection.toLowerCase().trim()),
+  );
+  const filteredRows = rows.filter(
+    (r) => !adminProtected.has(r.selection.toLowerCase().trim()),
+  );
+  if (filteredRows.length === 0) {
+    console.log(`[sync/outrights] All ${rows.length} rows are admin-managed — skipping upsert`);
+    return { updated: 0, skipped: rows.length, errors };
+  }
+
   const { error: upsertErr } = await db
     .from("outright_odds")
-    .upsert(rows, { onConflict: "market_id,selection" });
+    .upsert(filteredRows, { onConflict: "market_id,selection" });
 
   if (upsertErr) {
     errors.push(`DB upsert failed for ${sportKey}/${marketKey}: ${upsertErr.message}`);
     return { updated: 0, skipped, errors };
   }
 
-  console.log(`[sync/outrights] Upserted ${rows.length} rows for ${sportKey}/${marketKey}`);
-  return { updated: rows.length, skipped, errors };
+  const adminSkipped = rows.length - filteredRows.length;
+  console.log(`[sync/outrights] Upserted ${filteredRows.length} rows for ${sportKey}/${marketKey} (${adminSkipped} admin-protected skipped)`);
+  return { updated: filteredRows.length, skipped: skipped + adminSkipped, errors };
 }

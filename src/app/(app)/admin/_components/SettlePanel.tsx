@@ -53,15 +53,32 @@ export function SettlePanel({ matches }: Props) {
     });
   }
 
-  if (matches.length === 0) return null;
+  if (matches.length === 0) {
+    return (
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-200 text-[11px] font-bold text-gray-500">2</span>
+          <h2 className="text-base font-semibold text-gray-400">Avgör slip</h2>
+        </div>
+        <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-4">
+          <p className="text-xs text-gray-400">
+            Inga avslutade matcher ännu. Sätt ett resultat i <strong>Steg 1</strong> ovan — sedan aktiveras settlement här.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-3">
-      <h2 className="text-base font-semibold text-gray-900">Settlement</h2>
-      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
-        <p className="text-xs text-gray-500">
-          Välj en avslutad eller ogiltigförklarad match för att avgöra alla öppna slip som
-          innehåller den matchen. Idempotent — kan köras flera gånger utan dubbelutbetalning.
+      <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[11px] font-bold text-white">2</span>
+        <h2 className="text-base font-semibold text-gray-900">Avgör slip</h2>
+      </div>
+      <div className="rounded-xl border border-[var(--primary)]/20 bg-[var(--primary-50)]/40 p-4 space-y-4">
+        <p className="text-xs text-gray-600">
+          Välj en avslutad match för att avgöra alla slip som innehåller den matchen.
+          Idempotent — kan köras flera gånger utan dubbelutbetalning.
         </p>
 
         {/* Match selector */}
