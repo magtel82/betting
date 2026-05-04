@@ -25,7 +25,7 @@ const STAGE_LABEL: Record<string, string> = {
 const STATUS_CONFIG: Record<MatchStatus, { label: string | null; cls: string; pill?: boolean }> = {
   scheduled: { label: null,        cls: "" },
   live:      { label: "Pågår",     cls: "text-[var(--win)] font-semibold" },
-  finished:  { label: "Avslutad",  cls: "rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500", pill: true },
+  finished:  { label: "Avslutad",  cls: "rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500", pill: true },
   void:      { label: "Ogiltig",   cls: "text-[var(--loss)]" },
 };
 
@@ -64,7 +64,7 @@ export function MatchCard({ match }: Props) {
     <div
       className={`rounded-xl border p-3 shadow-sm ${
         isLive      ? "border-[var(--win)]/40 bg-white" :
-        isFinished  ? "border-gray-200 bg-gray-50/70"   :
+        isFinished  ? "border-gray-200 bg-gray-50"       :
                       "border-gray-200 bg-white"
       }`}
     >
@@ -120,7 +120,7 @@ export function MatchCard({ match }: Props) {
 
       {/* Odds row */}
       {match.odds && (
-        <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2">
+        <div className={`mt-3 flex items-center justify-between border-t border-gray-100 pt-2 ${isFinished ? "opacity-40" : ""}`}>
           <div className="flex gap-4 text-xs text-gray-600">
             <span>
               <span className="text-gray-400">H </span>

@@ -317,13 +317,24 @@ export default async function DashboardPage() {
               </div>
 
               {marketsMissing > 0 && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg bg-[var(--coin-50)] px-3 py-2 text-xs text-amber-800">
-                  <span aria-hidden>⚠</span>
-                  <span className="font-medium">
-                    {marketsMissing === 1
-                      ? "1 marknad saknar bet ännu"
-                      : `${marketsMissing} marknader saknar bet ännu`}
-                  </span>
+                <div className="mt-3 space-y-2">
+                  <p className="flex items-center gap-2 text-xs text-amber-800">
+                    <span aria-hidden>⚠</span>
+                    <span className="font-medium">
+                      {marketsWithBet} av {marketsTotal} lagda —{" "}
+                      {marketsMissing === 1 ? "1 marknad" : `${marketsMissing} marknader`} kvar
+                    </span>
+                  </p>
+                  <Link
+                    href="/specialbet"
+                    className="flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[var(--primary)] text-sm font-bold text-white shadow-sm transition-colors hover:bg-[var(--primary-600)] active:bg-[var(--primary-600)]"
+                  >
+                    Lägg specialbet nu
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                         strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden>
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </Link>
                 </div>
               )}
 
