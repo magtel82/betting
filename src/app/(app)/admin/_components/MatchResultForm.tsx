@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { correctMatchResult } from "../actions";
 import type { MatchWithTeams, MatchStatus } from "@/types";
@@ -48,14 +48,115 @@ function matchLabel(m: MatchWithTeams): string {
   return `#${m.match_number} ${home} – ${away} (${date})${statusMark}`;
 }
 
+// ─── Form fields — remounted via key when selected match changes ──────────────
+// key={match.id} on this component means React tears it down and rebuilds it
+// every time the selected match changes, resetting defaultValues and action state.
+
+function ResultFields({ match }: { match: MatchWithTeams }) {
+  const [state, action] = useActionState(correctMatchResult, null);
+
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="match_id" value={match.id} />
+
+      {/* Status */}
+      <div className="space-y-1">
+        <label className="block text-xs font-medium text-gray-700" htmlFor="result-status">
+          Status
+        </label>
+        <select
+          id="result-status"
+          name="status"
+          defaultValue={match.status}
+          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
+        >
+          {STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* FT Scores */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-700" htmlFor="home-score">
+            Hemmamål (FT)
+          </label>
+          <input
+            id="home-score"
+            name="home_score"
+            type="number"
+            min="0"
+            defaultValue={match.home_score ?? ""}
+            placeholder="0"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-700" htmlFor="away-score">
+            Bortamål (FT)
+          </label>
+          <input
+            id="away-score"
+            name="away_score"
+            type="number"
+            min="0"
+            defaultValue={match.away_score ?? ""}
+            placeholder="0"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {/* HT Scores */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-700" htmlFor="home-score-ht">
+            Hemmamål (HT, valfritt)
+          </label>
+          <input
+            id="home-score-ht"
+            name="home_score_ht"
+            type="number"
+            min="0"
+            defaultValue={match.home_score_ht ?? ""}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-700" htmlFor="away-score-ht">
+            Bortamål (HT, valfritt)
+          </label>
+          <input
+            id="away-score-ht"
+            name="away_score_ht"
+            type="number"
+            min="0"
+            defaultValue={match.away_score_ht ?? ""}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <Feedback state={state} />
+        <SubmitButton />
+      </div>
+    </form>
+  );
+}
+
+// ─── MatchResultForm ──────────────────────────────────────────────────────────
+
 interface Props {
   matches: MatchWithTeams[];
 }
 
 export function MatchResultForm({ matches }: Props) {
-  const [state, action] = useActionState(correctMatchResult, null);
-
-  const defaultMatch = matches[0];
+  const [selectedId, setSelectedId] = useState(matches[0]?.id ?? "");
+  const selectedMatch = matches.find((m) => m.id === selectedId) ?? matches[0];
 
   return (
     <section className="space-y-3">
@@ -67,129 +168,28 @@ export function MatchResultForm({ matches }: Props) {
         <p className="text-xs text-gray-500">
           Välj match, sätt status till <strong>Avslutad</strong> och fyll i resultatet. Gå sedan till <strong>Steg 2</strong> nedan för att avgöra slip.
         </p>
-        <form action={action} className="space-y-4">
-          {/* Match selector */}
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-700" htmlFor="result-match">
-              Match
-            </label>
-            <select
-              id="result-match"
-              name="match_id"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
-            >
-              {matches.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {matchLabel(m)}
-                </option>
-              ))}
-            </select>
-          </div>
 
-          {/* Status */}
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-700" htmlFor="result-status">
-              Status
-            </label>
-            <select
-              id="result-status"
-              name="status"
-              defaultValue={defaultMatch?.status ?? "scheduled"}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
-            >
-              {STATUS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Match selector — controlled, outside the keyed form */}
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-700" htmlFor="result-match">
+            Match
+          </label>
+          <select
+            id="result-match"
+            value={selectedId}
+            onChange={(e) => setSelectedId(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
+          >
+            {matches.map((m) => (
+              <option key={m.id} value={m.id}>
+                {matchLabel(m)}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          {/* Scores */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700" htmlFor="home-score">
-                Hemmamål (FT)
-              </label>
-              <input
-                id="home-score"
-                name="home_score"
-                type="number"
-                min="0"
-                placeholder={
-                  defaultMatch?.home_score != null
-                    ? String(defaultMatch.home_score)
-                    : "0"
-                }
-                defaultValue={defaultMatch?.home_score ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700" htmlFor="away-score">
-                Bortamål (FT)
-              </label>
-              <input
-                id="away-score"
-                name="away_score"
-                type="number"
-                min="0"
-                placeholder={
-                  defaultMatch?.away_score != null
-                    ? String(defaultMatch.away_score)
-                    : "0"
-                }
-                defaultValue={defaultMatch?.away_score ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* HT Scores */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700" htmlFor="home-score-ht">
-                Hemmamål (HT, valfritt)
-              </label>
-              <input
-                id="home-score-ht"
-                name="home_score_ht"
-                type="number"
-                min="0"
-                placeholder={
-                  defaultMatch?.home_score_ht != null
-                    ? String(defaultMatch.home_score_ht)
-                    : ""
-                }
-                defaultValue={defaultMatch?.home_score_ht ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700" htmlFor="away-score-ht">
-                Bortamål (HT, valfritt)
-              </label>
-              <input
-                id="away-score-ht"
-                name="away_score_ht"
-                type="number"
-                min="0"
-                placeholder={
-                  defaultMatch?.away_score_ht != null
-                    ? String(defaultMatch.away_score_ht)
-                    : ""
-                }
-                defaultValue={defaultMatch?.away_score_ht ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <Feedback state={state} />
-            <SubmitButton />
-          </div>
-        </form>
+        {/* Form fields — key forces remount on match change, resetting all state */}
+        {selectedMatch && <ResultFields key={selectedMatch.id} match={selectedMatch} />}
       </div>
     </section>
   );

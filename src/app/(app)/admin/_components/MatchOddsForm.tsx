@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useState, useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { setMatchOdds } from "../actions";
 import type { MatchWithTeams, MatchOdds } from "@/types";
@@ -39,18 +39,87 @@ interface MatchRow extends MatchWithTeams {
   odds: MatchOdds | null;
 }
 
+// ─── Odds fields — remounted via key when selected match changes ──────────────
+
+function OddsFields({ match }: { match: MatchRow }) {
+  const [state, action] = useActionState(setMatchOdds, null);
+  const odds = match.odds;
+
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="match_id" value={match.id} />
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-700" htmlFor="home-odds">
+            Hemma
+          </label>
+          <input
+            id="home-odds"
+            name="home_odds"
+            type="number"
+            step="0.01"
+            min="1.01"
+            defaultValue={odds?.home_odds ?? ""}
+            placeholder={odds ? String(odds.home_odds) : "1.50"}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-700" htmlFor="draw-odds">
+            Oavgjort
+          </label>
+          <input
+            id="draw-odds"
+            name="draw_odds"
+            type="number"
+            step="0.01"
+            min="1.01"
+            defaultValue={odds?.draw_odds ?? ""}
+            placeholder={odds ? String(odds.draw_odds) : "3.50"}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-700" htmlFor="away-odds">
+            Borta
+          </label>
+          <input
+            id="away-odds"
+            name="away_odds"
+            type="number"
+            step="0.01"
+            min="1.01"
+            defaultValue={odds?.away_odds ?? ""}
+            placeholder={odds ? String(odds.away_odds) : "5.00"}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {odds && (
+        <p className="text-xs text-gray-400">
+          Nuvarande odds ({odds.source === "admin" ? "manuell" : "API"}): {odds.home_odds} / {odds.draw_odds} / {odds.away_odds}
+        </p>
+      )}
+
+      <div className="flex items-center justify-between gap-3">
+        <Feedback state={state} />
+        <SubmitButton />
+      </div>
+    </form>
+  );
+}
+
+// ─── MatchOddsForm ────────────────────────────────────────────────────────────
+
 interface Props {
   matches: MatchRow[];
 }
 
 export function MatchOddsForm({ matches }: Props) {
-  const [state, action] = useActionState(setMatchOdds, null);
-  const selectRef = useRef<HTMLSelectElement>(null);
-
-  // Find currently selected match to pre-fill existing odds
-  const selectedMatchId = selectRef.current?.value ?? matches[0]?.id ?? "";
-  const selectedMatch = matches.find((m) => m.id === selectedMatchId);
-  const currentOdds = selectedMatch?.odds ?? null;
+  const [selectedId, setSelectedId] = useState(matches[0]?.id ?? "");
+  const selectedMatch = matches.find((m) => m.id === selectedId) ?? matches[0];
 
   return (
     <section className="space-y-3">
@@ -59,89 +128,28 @@ export function MatchOddsForm({ matches }: Props) {
         <p className="text-xs text-gray-500">
           Sätt eller uppdatera odds manuellt som fallback. Välj match, fyll i odds och spara.
         </p>
-        <form action={action} className="space-y-4">
-          {/* Match selector */}
-          <div className="space-y-1">
-            <label className="block text-xs font-medium text-gray-700" htmlFor="odds-match">
-              Match
-            </label>
-            <select
-              id="odds-match"
-              name="match_id"
-              ref={selectRef}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
-            >
-              {matches.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {matchLabel(m)}
-                  {m.odds ? " ✓" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
 
-          {/* Odds inputs */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700" htmlFor="home-odds">
-                Hemma
-              </label>
-              <input
-                id="home-odds"
-                name="home_odds"
-                type="number"
-                step="0.01"
-                min="1.01"
-                placeholder={currentOdds ? String(currentOdds.home_odds) : "1.50"}
-                defaultValue={currentOdds?.home_odds ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700" htmlFor="draw-odds">
-                Oavgjort
-              </label>
-              <input
-                id="draw-odds"
-                name="draw_odds"
-                type="number"
-                step="0.01"
-                min="1.01"
-                placeholder={currentOdds ? String(currentOdds.draw_odds) : "3.50"}
-                defaultValue={currentOdds?.draw_odds ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-gray-700" htmlFor="away-odds">
-                Borta
-              </label>
-              <input
-                id="away-odds"
-                name="away_odds"
-                type="number"
-                step="0.01"
-                min="1.01"
-                placeholder={currentOdds ? String(currentOdds.away_odds) : "5.00"}
-                defaultValue={currentOdds?.away_odds ?? ""}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
-              />
-            </div>
-          </div>
+        {/* Match selector — controlled, outside the keyed form */}
+        <div className="space-y-1">
+          <label className="block text-xs font-medium text-gray-700" htmlFor="odds-match">
+            Match
+          </label>
+          <select
+            id="odds-match"
+            value={selectedId}
+            onChange={(e) => setSelectedId(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
+          >
+            {matches.map((m) => (
+              <option key={m.id} value={m.id}>
+                {matchLabel(m)}{m.odds ? " ✓" : ""}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          {currentOdds && (
-            <p className="text-xs text-gray-400">
-              Nuvarande odds (
-              {currentOdds.source === "admin" ? "manuell" : "API"}
-              ): {currentOdds.home_odds} / {currentOdds.draw_odds} / {currentOdds.away_odds}
-            </p>
-          )}
-
-          <div className="flex items-center justify-between gap-3">
-            <Feedback state={state} />
-            <SubmitButton />
-          </div>
-        </form>
+        {/* Odds fields — key forces remount on match change, resetting all state */}
+        {selectedMatch && <OddsFields key={selectedMatch.id} match={selectedMatch} />}
       </div>
     </section>
   );
