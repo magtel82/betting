@@ -95,14 +95,21 @@ export async function amendSlipAction(
     p_selections:  selections.map((s) => ({
       match_id:      s.matchId,
       outcome:       s.outcome,
-      odds_snapshot: s.oddsSnapshot,
+      odds_snapshot: Number(s.oddsSnapshot).toFixed(2),
     })),
   });
 
   if (rpcError) {
     console.error("[amendSlipAction] RPC error:", rpcError.message, rpcError.code, rpcError.details);
     const code = rpcError.code ?? "unknown";
-    return { ok: false, code: "rpc_error", error: `Internt fel (${code}) — försök igen` };
+    const isInvalidCast = code === "22P02";
+    return {
+      ok: false,
+      code: "rpc_error",
+      error: isInvalidCast
+        ? "Datafel vid ändring — ladda om sidan och försök igen"
+        : `Internt fel (${code}) — försök igen`,
+    };
   }
 
   const result = rpcData as Record<string, unknown>;
