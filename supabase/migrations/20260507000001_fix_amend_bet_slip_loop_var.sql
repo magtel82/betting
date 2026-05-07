@@ -1,99 +1,8 @@
--- ============================================================
--- Migration 0006 — cancel_bet_slip + amend_bet_slip RPCs (fas 5D)
--- ============================================================
--- cancel_bet_slip: atomically cancels an open slip and refunds stake.
--- amend_bet_slip:  cancel + new placement in a single transaction.
---
--- Both functions are SECURITY DEFINER and verify auth.uid() ownership.
--- amend_bet_slip intentionally does all validation BEFORE any writes,
--- so odds_changed errors roll back the entire transaction — the old
--- slip stays intact and the caller can retry with updated odds.
--- ============================================================
-
--- ─── cancel_bet_slip ─────────────────────────────────────────
--- Cancels an open slip and refunds the stake.
--- Guards:
---   • caller must own the slip (via auth.uid())
---   • slip must be status='open'
---   • no match in the slip may have started (scheduled_at > now())
--- On success: slip→cancelled, match_wallet += stake, ledger entry inserted.
-
-create or replace function cancel_bet_slip(p_slip_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_slip   record;
-  v_member record;
-  v_sel    record;
-begin
-  -- 1. Fetch and lock the slip
-  select * into v_slip from bet_slips where id = p_slip_id for update;
-  if not found then
-    return jsonb_build_object('error', 'slip_not_found');
-  end if;
-
-  -- 2. Fetch and lock the member (we need match_wallet update)
-  select * into v_member
-  from league_members
-  where id = v_slip.league_member_id and is_active = true
-  for update;
-
-  if not found then
-    return jsonb_build_object('error', 'member_not_found');
-  end if;
-
-  -- 3. Caller must own this slip
-  if v_member.user_id != auth.uid() then
-    return jsonb_build_object('error', 'unauthorized');
-  end if;
-
-  -- 4. Slip must be open
-  if v_slip.status != 'open' then
-    return jsonb_build_object('error', 'slip_not_open', 'status', v_slip.status::text);
-  end if;
-
-  -- 5. No match in the slip may have started
-  for v_sel in
-    select bss.match_id, m.scheduled_at
-    from bet_slip_selections bss
-    join matches m on m.id = bss.match_id
-    where bss.slip_id = p_slip_id
-  loop
-    if v_sel.scheduled_at <= now() then
-      return jsonb_build_object('error', 'match_already_started', 'match_id', v_sel.match_id);
-    end if;
-  end loop;
-
-  -- 6. Cancel the slip
-  update bet_slips set status = 'cancelled' where id = p_slip_id;
-
-  -- 7. Refund stake to match_wallet
-  update league_members
-  set match_wallet = match_wallet + v_slip.stake
-  where id = v_member.id;
-
-  -- 8. Record the refund in the ledger
-  insert into match_wallet_transactions (league_member_id, amount, type, slip_id)
-  values (v_member.id, v_slip.stake, 'bet_refund', p_slip_id);
-
-  return jsonb_build_object('ok', true, 'refunded', v_slip.stake);
-end;
-$$;
-
-
--- ─── amend_bet_slip ──────────────────────────────────────────
--- Atomically cancels an old slip and places a new one.
--- All validation (including odds_changed) runs BEFORE any writes.
--- If new selections fail validation, the old slip is untouched.
---
--- Stake limit for the new slip is computed against the effective
--- balance: match_wallet + old_stake (because the refund is included
--- in the same transaction).
---
--- Returns same shape as place_bet_slip on success.
+-- Fix: amend_bet_slip first FOR-loop used v_sel (jsonb) as loop variable for a
+-- multi-column SELECT. PostgreSQL assigns the row via its text representation
+-- e.g. (uuid_val,"2026-05-10 20:00:00+02") which is not valid JSON, causing
+-- a 22P02 (invalid_text_representation) error on every amend attempt.
+-- Fix: use a separate record variable v_old_sel for that loop.
 
 create or replace function amend_bet_slip(
   p_old_slip_id uuid,
@@ -114,6 +23,7 @@ declare
   v_slip_id       uuid;
   v_potential     int;
   v_sel           jsonb;
+  v_old_sel       record;
   v_match         record;
   v_odds_row      record;
   v_submitted     numeric(6,2);
@@ -121,7 +31,6 @@ declare
   v_outcome       text;
   v_match_id      uuid;
   v_sel_count     int;
-  v_old_sel       record;
 begin
   -- ── Phase 1: validate old slip ──────────────────────────────
 
@@ -221,8 +130,6 @@ begin
 
     v_submitted := (v_sel->>'odds_snapshot')::numeric(6,2);
     if v_submitted != v_current then
-      -- All validation has run before any writes, so if odds changed the old
-      -- slip is still intact and the caller can retry with updated odds.
       return jsonb_build_object(
         'error',     'odds_changed',
         'match_id',  v_match_id,
@@ -278,11 +185,11 @@ begin
   values (v_member.id, -p_stake, 'bet_stake', v_slip_id);
 
   return jsonb_build_object(
-    'ok',              true,
-    'slip_id',         v_slip_id,
-    'combined_odds',   v_combined,
+    'ok',               true,
+    'slip_id',          v_slip_id,
+    'combined_odds',    v_combined,
     'potential_payout', v_potential,
-    'refunded',        v_old_slip.stake
+    'refunded',         v_old_slip.stake
   );
 end;
 $$;

@@ -669,6 +669,7 @@ declare
   v_outcome       text;
   v_match_id      uuid;
   v_sel_count     int;
+  v_old_sel       record;
 begin
   select * into v_old_slip from bet_slips where id = p_old_slip_id for update;
   if not found then
@@ -692,14 +693,14 @@ begin
     return jsonb_build_object('error', 'slip_not_open', 'status', v_old_slip.status::text);
   end if;
 
-  for v_sel in
+  for v_old_sel in
     select bss.match_id, m.scheduled_at
     from bet_slip_selections bss
     join matches m on m.id = bss.match_id
     where bss.slip_id = p_old_slip_id
   loop
-    if v_sel.scheduled_at <= now() then
-      return jsonb_build_object('error', 'match_already_started', 'match_id', v_sel.match_id);
+    if v_old_sel.scheduled_at <= now() then
+      return jsonb_build_object('error', 'match_already_started', 'match_id', v_old_sel.match_id);
     end if;
   end loop;
 
