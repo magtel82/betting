@@ -12,6 +12,10 @@ const STAGE_LABEL: Record<string, string> = {
   final:       "Final",
 };
 
+function displayName(name: string, shortName: string): string {
+  return name.length > 10 ? shortName : name;
+}
+
 function swTime(utc: string) {
   return new Date(utc).toLocaleTimeString("sv-SE", {
     timeZone: "Europe/Stockholm",
@@ -115,7 +119,7 @@ export function MatchBetCard({
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="shrink-0 text-2xl leading-none">{match.home_team?.flag_emoji ?? "🏳"}</span>
           <span className="truncate text-sm font-semibold text-gray-900">
-            {match.home_team?.name ?? "TBD"}
+            {match.home_team ? displayName(match.home_team.name, match.home_team.short_name) : "TBD"}
           </span>
         </div>
 
@@ -124,7 +128,7 @@ export function MatchBetCard({
         <div className="flex min-w-0 flex-1 flex-row-reverse items-center gap-2">
           <span className="shrink-0 text-2xl leading-none">{match.away_team?.flag_emoji ?? "🏳"}</span>
           <span className="truncate text-right text-sm font-semibold text-gray-900">
-            {match.away_team?.name ?? "TBD"}
+            {match.away_team ? displayName(match.away_team.name, match.away_team.short_name) : "TBD"}
           </span>
         </div>
       </div>

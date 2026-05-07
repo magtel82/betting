@@ -46,10 +46,12 @@ function MatchCard({ match }: { match: BracketMatch }) {
       <div className="px-3 py-2.5 flex items-center gap-2">
         {/* Home */}
         <div className={`flex items-center gap-1.5 flex-1 min-w-0 ${homeWon ? "font-semibold" : ""}`}>
-          <span className="text-base shrink-0">
-            {home.team?.flag ?? "🏳"}
-          </span>
-          <span className={`text-sm truncate ${home.team ? "text-gray-900" : "text-gray-400"}`}>
+          {home.team ? (
+            <span className="text-base shrink-0">{home.team.flag ?? "🏳"}</span>
+          ) : (
+            <span className="shrink-0 w-5 h-5 rounded-full bg-gray-100 border border-gray-200 inline-block" />
+          )}
+          <span className={`text-sm truncate ${home.team ? "text-gray-900" : "text-gray-400 italic"}`}>
             {home.team?.shortName ?? home.label}
           </span>
         </div>
@@ -69,12 +71,14 @@ function MatchCard({ match }: { match: BracketMatch }) {
 
         {/* Away */}
         <div className={`flex items-center gap-1.5 flex-1 min-w-0 justify-end ${awayWon ? "font-semibold" : ""}`}>
-          <span className={`text-sm truncate text-right ${away.team ? "text-gray-900" : "text-gray-400"}`}>
+          <span className={`text-sm truncate text-right ${away.team ? "text-gray-900" : "text-gray-400 italic"}`}>
             {away.team?.shortName ?? away.label}
           </span>
-          <span className="text-base shrink-0">
-            {away.team?.flag ?? "🏳"}
-          </span>
+          {away.team ? (
+            <span className="text-base shrink-0">{away.team.flag ?? "🏳"}</span>
+          ) : (
+            <span className="shrink-0 w-5 h-5 rounded-full bg-gray-100 border border-gray-200 inline-block" />
+          )}
         </div>
       </div>
 

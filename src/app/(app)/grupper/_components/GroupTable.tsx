@@ -59,7 +59,7 @@ export function GroupTable({ letter, standings }: Props) {
               {/* Team */}
               <span className="flex items-center gap-1.5 min-w-0">
                 <span className="text-base leading-none shrink-0">{s.flag ?? "🏳"}</span>
-                <span className="truncate text-xs font-medium text-gray-900">{s.shortName}</span>
+                <span className="truncate text-xs font-medium text-gray-900">{s.name}</span>
               </span>
 
               {/* Stats */}

@@ -1,6 +1,7 @@
 import { requireActiveUser } from "@/lib/auth";
 import { TopBar } from "@/components/nav/TopBar";
 import { logoutAction } from "@/app/actions";
+import { EditNameForm } from "./_components/EditNameForm";
 
 export default async function ProfilPage() {
   const { supabase, user, profile } = await requireActiveUser();
@@ -28,7 +29,7 @@ export default async function ProfilPage() {
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xl font-bold text-gray-600">
               {profile.display_name.slice(0, 1).toUpperCase()}
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate font-semibold text-gray-900">{profile.display_name}</p>
               <p className="truncate text-sm text-gray-400">{user.email}</p>
               {isAdmin && (
@@ -36,6 +37,7 @@ export default async function ProfilPage() {
                   Admin
                 </span>
               )}
+              <EditNameForm currentName={profile.display_name} />
             </div>
           </div>
         </section>

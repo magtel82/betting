@@ -79,7 +79,7 @@ export default async function DashboardPage() {
       )
       .eq("status", "scheduled")
       .order("scheduled_at")
-      .limit(3),
+      .limit(6),
     tournamentId
       ? supabase
           .from("special_markets")
@@ -94,7 +94,8 @@ export default async function DashboardPage() {
   ]);
 
   const openSlips   = (slipsRes.data ?? []) as unknown as ActiveSlip[];
-  const nextMatches = (matchesRes.data ?? []) as unknown as NextMatch[];
+  const rawMatches  = (matchesRes.data ?? []) as unknown as NextMatch[];
+  const nextMatches = [...new Map(rawMatches.map((m) => [m.id, m])).values()].slice(0, 3);
   const markets     = marketsRes.data ?? [];
   const activeBets  = betsRes.data ?? [];
 

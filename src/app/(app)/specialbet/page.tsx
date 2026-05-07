@@ -108,7 +108,15 @@ export default async function SpecialbetRoute() {
       );
       const marketMap = new Map(markets.map((m) => [m.id, m]));
 
-      othersReveal = (otherBetsRes.data ?? []).map((bet) => {
+      const rawBets = otherBetsRes.data ?? [];
+      const betMap = new Map<string, typeof rawBets[0]>();
+      for (const bet of rawBets) {
+        const key = `${bet.league_member_id}|${bet.market_id}`;
+        const existing = betMap.get(key);
+        if (!existing || Number(bet.version) > Number(existing.version)) betMap.set(key, bet);
+      }
+
+      othersReveal = [...betMap.values()].map((bet) => {
         const market = marketMap.get(bet.market_id as string);
         const isFixed = market?.type === "sverige_mal";
         return {
