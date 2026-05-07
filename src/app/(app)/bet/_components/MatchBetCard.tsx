@@ -158,8 +158,8 @@ export function MatchBetCard({
           />
         </div>
       ) : (
-        <span className="inline-block rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-400">
-          Inga odds — ej spelbar
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+          <span aria-hidden>⏳</span> Väntar på odds
         </span>
       )}
 

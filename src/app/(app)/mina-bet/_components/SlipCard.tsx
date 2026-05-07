@@ -107,11 +107,12 @@ interface Props {
   slip:       SlipRow;
   showPlayer: boolean;
   isOwn:      boolean;
+  isNew?:     boolean;
 }
 
 type DeleteState = "idle" | "confirming" | "error";
 
-export function SlipCard({ slip, showPlayer, isOwn }: Props) {
+export function SlipCard({ slip, showPlayer, isOwn, isNew = false }: Props) {
   const { label: statusLabel, cls: statusCls } = SLIP_STATUS_CFG[slip.status];
   const isMulti     = slip.selections.length > 1;
   const comboLabel  = COMBO_LABEL[slip.selections.length] ?? `${slip.selections.length}-vägs`;
@@ -151,7 +152,9 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
       className={`overflow-hidden rounded-xl border shadow-sm ${
         isCancelled
           ? "border-gray-200 bg-gray-50 opacity-70"
-          : `bg-white ${isOwn ? "border-[var(--primary)]/30" : "border-gray-200"}`
+          : isNew
+            ? "bg-white border-[var(--win)]/40 ring-1 ring-[var(--win)]/20"
+            : `bg-white ${isOwn ? "border-[var(--primary)]/30" : "border-gray-200"}`
       }`}
     >
       {/* Header */}
@@ -259,6 +262,13 @@ export function SlipCard({ slip, showPlayer, isOwn }: Props) {
           )}
         </div>
       </div>
+
+      {/* Locked notice — open but not editable (match started) */}
+      {isOwn && slip.status === "open" && !isModifiable && (
+        <div className="border-t border-gray-100 px-3 py-2">
+          <p className="text-xs text-gray-400">Låst — en eller flera matcher har startat</p>
+        </div>
+      )}
 
       {/* Actions */}
       {isOwn && isModifiable && (

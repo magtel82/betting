@@ -10,6 +10,7 @@ import type { SlipStatus } from "@/types";
 interface Props {
   slips:         SlipRow[];
   currentUserId: string;
+  newSlipId?:    string;
 }
 
 // ─── Sorting ──────────────────────────────────────────────────────────────────
@@ -33,9 +34,10 @@ function sortSlips(slips: SlipRow[]): SlipRow[] {
 
 // ─── SlipsView ────────────────────────────────────────────────────────────────
 
-export function SlipsView({ slips, currentUserId }: Props) {
+export function SlipsView({ slips, currentUserId, newSlipId }: Props) {
   const [tab,            setTab]            = useState<"mine" | "all">("mine");
   const [showCancelled,  setShowCancelled]  = useState(false);
+  const [showBanner,     setShowBanner]     = useState(!!newSlipId);
 
   const mySlips  = slips.filter((s) => s.member?.user_id === currentUserId);
   const allSlips = slips;
@@ -68,6 +70,20 @@ export function SlipsView({ slips, currentUserId }: Props) {
 
       {/* ── Content ─────────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-lg px-4 py-4 space-y-3">
+        {/* Success banner */}
+        {showBanner && (
+          <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-[var(--win-50)] px-3 py-2.5 shadow-sm">
+            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--win)] text-[10px] font-bold text-white">✓</span>
+            <span className="flex-1 text-sm font-medium text-[var(--win)]">Slip sparat</span>
+            <button
+              type="button"
+              onClick={() => setShowBanner(false)}
+              aria-label="Stäng"
+              className="text-[var(--win)] opacity-60 hover:opacity-100"
+            >✕</button>
+          </div>
+        )}
+
         {visible.length === 0 ? (
           <EmptyState tab={tab} />
         ) : (
@@ -77,6 +93,7 @@ export function SlipsView({ slips, currentUserId }: Props) {
               slip={slip}
               showPlayer={tab === "all"}
               isOwn={slip.member?.user_id === currentUserId}
+              isNew={slip.id === newSlipId}
             />
           ))
         )}

@@ -3,8 +3,11 @@ import { TopBar } from "@/components/nav/TopBar";
 import { SlipsView } from "./_components/SlipsView";
 import type { SlipRow } from "./_components/SlipCard";
 
-export default async function MinaBetPage() {
+export default async function MinaBetPage(props: {
+  searchParams: Promise<{ placed?: string }>;
+}) {
   const { supabase, user } = await requireActiveUser();
+  const { placed: newSlipId } = await props.searchParams;
 
   // Fetch all slips in the user's league — RLS enforces league membership,
   // so only slips from the same league are returned.
@@ -44,7 +47,7 @@ export default async function MinaBetPage() {
   return (
     <>
       <TopBar title="Mina bet" />
-      <SlipsView slips={slips} currentUserId={user.id} />
+      <SlipsView slips={slips} currentUserId={user.id} newSlipId={newSlipId} />
     </>
   );
 }

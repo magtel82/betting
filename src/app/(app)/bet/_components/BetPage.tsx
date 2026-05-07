@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useTransition, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { placeSlipAction, amendSlipAction } from "../actions";
 import { MatchBetCard } from "./MatchBetCard";
@@ -33,13 +34,6 @@ function swDateLabel(utc: string) {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface SuccessResult {
-  slipId:          string;
-  combinedOdds:    number;
-  potentialPayout: number;
-  wasAmend:        boolean;
-}
-
 interface OddsChangedInfo {
   matchId: string;
   newOdds: number;
@@ -62,6 +56,7 @@ export function BetPage({
   prefilledSelections,
   prefilledStake,
 }: Props) {
+  const router = useRouter();
   // isAmendMode tracks whether we're still amending a specific old slip.
   // Cleared on success so subsequent submits create fresh slips.
   const [isAmendMode,    setIsAmendMode]   = useState(!!amendSlipId);
@@ -89,7 +84,6 @@ export function BetPage({
   const [isPending,       startTransition] = useTransition();
   const [errorMsg,        setErrorMsg]     = useState<string | null>(null);
   const [oddsChangedInfo, setOddsChanged]  = useState<OddsChangedInfo | null>(null);
-  const [successResult,   setSuccessResult]= useState<SuccessResult | null>(null);
 
   // ── sessionStorage persistence ──────────────────────────────────────────────
   // Restore selections when the user navigates back to /bet within the same
@@ -179,7 +173,6 @@ export function BetPage({
   function handleToggle(matchId: string, outcome: BetOutcome, oddsSnapshot: number) {
     setErrorMsg(null);
     setOddsChanged(null);
-    setSuccessResult(null);
 
     const existing = selections.find((s) => s.matchId === matchId);
 
@@ -213,7 +206,6 @@ export function BetPage({
     setSelections([]);
     setOddsChanged(null);
     setErrorMsg(null);
-    setSuccessResult(null);
     setPanelOpen(false);
   }
 
@@ -227,18 +219,12 @@ export function BetPage({
         : await placeSlipAction(selections, stakeNum);
 
       if (result.ok) {
-        setSuccessResult({
-          slipId:          result.slipId,
-          combinedOdds:    result.combinedOdds,
-          potentialPayout: result.potentialPayout,
-          wasAmend:        !!activeAmendId,
-        });
         setSelections([]);
-        setStake(String(Math.min(50, Math.floor(matchWallet * 0.3))));
         setOddsChanged(null);
-        setIsAmendMode(false); // done amending — next submit is a fresh placement
+        setIsAmendMode(false);
         setPanelOpen(false);
         try { sessionStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+        router.push(`/mina-bet?placed=${result.slipId}`);
       } else if (
         !result.ok &&
         result.code === "odds_changed" &&
@@ -296,7 +282,7 @@ export function BetPage({
           <div className="min-w-0 lg:flex-[3]">
 
             {/* Amend mode banner */}
-            {isAmendMode && !successResult && (
+            {isAmendMode && (
               <div className="pt-3 pb-1">
                 <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
                   <span className="mt-px shrink-0 text-amber-500">✎</span>
@@ -354,39 +340,6 @@ export function BetPage({
                 Välj <strong className="text-gray-700">1–5 matcher</strong> · max 30% av saldo per slip
               </p>
             </div>
-
-            {/* Success banner */}
-            {successResult && (
-              <div className="pb-3">
-                <div className="rounded-xl border border-green-200 bg-[var(--win-50)] p-4 shadow-sm">
-                  <div className="flex items-start gap-2">
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--win)] text-xs font-bold text-white">✓</span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-[var(--win)]">
-                        {successResult.wasAmend ? "Slipet är ändrat!" : "Slipet är placerat!"}
-                      </p>
-                      <p className="mt-0.5 text-xs text-[var(--win)]">
-                        Möjlig vinst:{" "}
-                        <strong className="tabular-nums">{successResult.potentialPayout.toLocaleString("sv-SE")}</strong>{" "}
-                        🪙 · Odds <strong className="tabular-nums">{successResult.combinedOdds.toFixed(2)}x</strong>
-                      </p>
-                      <div className="mt-2 flex items-center gap-4">
-                        <button
-                          type="button"
-                          onClick={() => setSuccessResult(null)}
-                          className="text-xs font-medium text-[var(--win)] underline underline-offset-2"
-                        >
-                          Stäng
-                        </button>
-                        <Link href="/mina-bet" className="text-xs font-medium text-[var(--win)] underline underline-offset-2">
-                          Se dina slip →
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Empty state */}
             {upcomingMatches.length === 0 && (
