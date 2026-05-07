@@ -78,6 +78,11 @@ export async function inviteUser(
     return { error: "Kunde inte lägga till inbjudan" };
   }
 
+  // If a user with this email already signed up before being whitelisted, their
+  // profile has is_active=false (trigger only fires on first sign-up). Activate
+  // them immediately so they don't need a second sign-up cycle.
+  await ctx.supabase.rpc("activate_whitelisted_profile", { p_email: email });
+
   await writeAuditLog(ctx.supabase, ctx.user.id, "whitelist_add", "invite_whitelist", null, { email });
   revalidatePath("/admin");
   return { success: `${email} tillagd i whitelist` };

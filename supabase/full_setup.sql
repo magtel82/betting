@@ -179,6 +179,62 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function handle_new_user();
 
+-- ─── activate_whitelisted_profile ────────────────────────────
+-- Called by the inviteUser admin action after inserting into invite_whitelist.
+-- Handles the case where a user already signed up before being whitelisted:
+-- the trigger only fires once on first sign-up, so their profile stays
+-- is_active=false. This function corrects that atomically.
+create or replace function activate_whitelisted_profile(p_email text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id   uuid;
+  v_league_id uuid;
+  v_activated boolean := false;
+  v_joined    boolean := false;
+begin
+  select id into v_user_id
+  from auth.users
+  where lower(email) = lower(trim(p_email))
+  limit 1;
+
+  if v_user_id is null then
+    return jsonb_build_object('user_found', false);
+  end if;
+
+  if not exists(
+    select 1 from public.invite_whitelist
+    where email = lower(trim(p_email))
+  ) then
+    return jsonb_build_object('error', 'not_in_whitelist');
+  end if;
+
+  update public.profiles
+  set is_active = true
+  where id = v_user_id and is_active = false;
+  v_activated := found;
+
+  select id into v_league_id from public.leagues limit 1;
+  if v_league_id is not null then
+    insert into public.league_members (league_id, user_id, role, match_wallet, special_wallet)
+    values (v_league_id, v_user_id, 'player', 5000, 1000)
+    on conflict do nothing;
+    v_joined := found;
+  end if;
+
+  return jsonb_build_object(
+    'user_found', true,
+    'activated',  v_activated,
+    'joined',     v_joined
+  );
+end;
+$$;
+
+grant execute on function activate_whitelisted_profile(text) to authenticated;
+
 create or replace function is_league_admin(p_league_id uuid)
 returns boolean language sql security definer stable as $$
   select exists(
