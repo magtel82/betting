@@ -4,6 +4,7 @@ import { useState, useTransition, useMemo } from "react";
 import Link from "next/link";
 import { deleteSlipAction } from "../actions";
 import type { SlipStatus, BetStatus, BetOutcome } from "@/types";
+import { FlagIcon } from "@/components/FlagIcon";
 
 export interface SelectionRow {
   id:            string;
@@ -192,9 +193,9 @@ export function SlipCard({ slip, showPlayer, isOwn, isNew = false }: Props) {
                 ) : (
                   <>
                     <p className="truncate text-sm font-semibold text-gray-900">
-                      <span className="text-base">{home?.flag_emoji}</span> {home?.short_name ?? "?"}
+                      <FlagIcon code={home?.short_name ?? ""} className="text-base" /> {home?.short_name ?? "?"}
                       <span className="mx-1 text-gray-300">–</span>
-                      <span className="text-base">{away?.flag_emoji}</span> {away?.short_name ?? "?"}
+                      <FlagIcon code={away?.short_name ?? ""} className="text-base" /> {away?.short_name ?? "?"}
                     </p>
                     {label && (
                       <p className="mt-0.5 text-[11px] uppercase tracking-wide text-gray-400">{label}</p>

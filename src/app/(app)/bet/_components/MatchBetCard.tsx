@@ -1,6 +1,7 @@
 "use client";
 
 import type { MatchWithTeamsAndOdds, BetOutcome } from "@/types";
+import { FlagIcon } from "@/components/FlagIcon";
 
 const STAGE_LABEL: Record<string, string> = {
   group:       "Grupp",
@@ -117,7 +118,7 @@ export function MatchBetCard({
       {/* Teams */}
       <div className="mb-3 flex items-center gap-2">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="shrink-0 text-2xl leading-none">{match.home_team?.flag_emoji ?? "🏳"}</span>
+          <FlagIcon code={match.home_team?.short_name ?? ""} className="shrink-0 text-2xl" />
           <span className="truncate text-sm font-semibold text-gray-900">
             {match.home_team ? displayName(match.home_team.name, match.home_team.short_name) : "TBD"}
           </span>
@@ -126,7 +127,7 @@ export function MatchBetCard({
         <span className="shrink-0 text-[11px] font-medium uppercase tracking-wider text-gray-300">vs</span>
 
         <div className="flex min-w-0 flex-1 flex-row-reverse items-center gap-2">
-          <span className="shrink-0 text-2xl leading-none">{match.away_team?.flag_emoji ?? "🏳"}</span>
+          <FlagIcon code={match.away_team?.short_name ?? ""} className="shrink-0 text-2xl" />
           <span className="truncate text-right text-sm font-semibold text-gray-900">
             {match.away_team ? displayName(match.away_team.name, match.away_team.short_name) : "TBD"}
           </span>

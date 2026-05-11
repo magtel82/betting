@@ -1,4 +1,5 @@
 import type { TeamStanding } from "@/lib/group-standings";
+import { FlagIcon } from "@/components/FlagIcon";
 
 interface Props {
   letter:    string;
@@ -58,7 +59,7 @@ export function GroupTable({ letter, standings }: Props) {
 
               {/* Team */}
               <span className="flex items-center gap-1.5 min-w-0">
-                <span className="text-base leading-none shrink-0">{s.flag ?? "🏳"}</span>
+                <FlagIcon code={s.shortName} className="shrink-0 text-base" />
                 <span className="truncate text-xs font-medium text-gray-900">{s.name}</span>
               </span>
 

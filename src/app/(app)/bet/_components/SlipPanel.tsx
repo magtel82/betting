@@ -1,6 +1,7 @@
 "use client";
 
 import type { MatchWithTeamsAndOdds, BetOutcome } from "@/types";
+import { FlagIcon } from "@/components/FlagIcon";
 
 export interface LocalSelection {
   matchId:      string;
@@ -113,8 +114,8 @@ export function SlipPanel({
                 >
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold text-gray-900">
-                      {match?.home_team?.flag_emoji} {match?.home_team?.short_name ?? "?"}&nbsp;–&nbsp;
-                      {match?.away_team?.flag_emoji} {match?.away_team?.short_name ?? "?"}
+                      <FlagIcon code={match?.home_team?.short_name ?? ""} /> {match?.home_team?.short_name ?? "?"}&nbsp;–&nbsp;
+                      <FlagIcon code={match?.away_team?.short_name ?? ""} /> {match?.away_team?.short_name ?? "?"}
                     </p>
                     <div className="mt-0.5 flex items-center gap-1.5">
                       <span className="text-xs text-gray-500">{OUTCOME_LABEL[sel.outcome]}</span>
@@ -281,8 +282,8 @@ export function SlipPanel({
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-900">
-                      {match?.home_team?.flag_emoji} {match?.home_team?.short_name ?? "?"}&nbsp;–&nbsp;
-                      {match?.away_team?.flag_emoji} {match?.away_team?.short_name ?? "?"}
+                      <FlagIcon code={match?.home_team?.short_name ?? ""} /> {match?.home_team?.short_name ?? "?"}&nbsp;–&nbsp;
+                      <FlagIcon code={match?.away_team?.short_name ?? ""} /> {match?.away_team?.short_name ?? "?"}
                     </p>
                     <div className="mt-0.5 flex items-center gap-1.5">
                       <span className="text-xs text-gray-500">{OUTCOME_LABEL[sel.outcome]}</span>

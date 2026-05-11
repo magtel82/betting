@@ -1,6 +1,7 @@
 "use client";
 
 import type { MatchWithTeamsAndOdds, MatchStatus } from "@/types";
+import { FlagIcon } from "@/components/FlagIcon";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -31,10 +32,10 @@ const STATUS_CONFIG: Record<MatchStatus, { label: string | null; cls: string; pi
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function TeamCol({ flag, name }: { flag: string | null; name: string }) {
+function TeamCol({ code, name }: { code: string; name: string }) {
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
-      <span className="text-2xl leading-none">{flag ?? "🏳"}</span>
+      <FlagIcon code={code} className="text-2xl" />
       <span className="truncate text-center text-xs font-medium text-gray-800">{name}</span>
     </div>
   );
@@ -93,7 +94,7 @@ export function MatchCard({ match }: Props) {
       {/* Teams + score */}
       <div className="flex items-center gap-2">
         <TeamCol
-          flag={match.home_team?.flag_emoji ?? null}
+          code={match.home_team?.short_name ?? ""}
           name={match.home_team?.short_name ?? "TBD"}
         />
 
@@ -113,7 +114,7 @@ export function MatchCard({ match }: Props) {
         )}
 
         <TeamCol
-          flag={match.away_team?.flag_emoji ?? null}
+          code={match.away_team?.short_name ?? ""}
           name={match.away_team?.short_name ?? "TBD"}
         />
       </div>

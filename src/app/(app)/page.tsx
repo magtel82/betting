@@ -1,6 +1,7 @@
 import { requireActiveUser } from "@/lib/auth";
 import { TopBar } from "@/components/nav/TopBar";
 import Link from "next/link";
+import { FlagIcon } from "@/components/FlagIcon";
 
 function swDateTime(utc: string) {
   return new Date(utc).toLocaleString("sv-SE", {
@@ -16,8 +17,8 @@ function swDateTime(utc: string) {
 type NextMatch = {
   id: string;
   scheduled_at: string;
-  home_team: { name: string; flag_emoji: string | null } | null;
-  away_team: { name: string; flag_emoji: string | null } | null;
+  home_team: { name: string; short_name: string; flag_emoji: string | null } | null;
+  away_team: { name: string; short_name: string; flag_emoji: string | null } | null;
   odds: { home_odds: number; draw_odds: number; away_odds: number }[] | null;
 };
 
@@ -75,7 +76,7 @@ export default async function DashboardPage() {
     supabase
       .from("matches")
       .select(
-        "id, scheduled_at, home_team:teams!matches_home_team_id_fkey(name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, flag_emoji), odds:match_odds(home_odds, draw_odds, away_odds)"
+        "id, scheduled_at, home_team:teams!matches_home_team_id_fkey(name, short_name, flag_emoji), away_team:teams!matches_away_team_id_fkey(name, short_name, flag_emoji), odds:match_odds(home_odds, draw_odds, away_odds)"
       )
       .eq("status", "scheduled")
       .order("scheduled_at")
@@ -268,10 +269,10 @@ export default async function DashboardPage() {
                   >
                     <p className="text-xs font-medium text-gray-400 tabular-nums">{swDateTime(m.scheduled_at)}</p>
                     <p className="mt-1 text-sm font-semibold text-gray-900">
-                      <span className="text-base">{m.home_team?.flag_emoji}</span>{" "}
+                      <FlagIcon code={m.home_team?.short_name ?? ""} className="text-base" />{" "}
                       {m.home_team?.name ?? "?"}
                       <span className="mx-1.5 text-gray-300">vs</span>
-                      <span className="text-base">{m.away_team?.flag_emoji}</span>{" "}
+                      <FlagIcon code={m.away_team?.short_name ?? ""} className="text-base" />{" "}
                       {m.away_team?.name ?? "?"}
                     </p>
                     {o && (
