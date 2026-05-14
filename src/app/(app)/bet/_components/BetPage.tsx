@@ -335,10 +335,13 @@ export function BetPage({
             </div>
 
             {/* Instruction */}
-            <div className="pb-3">
+            <div className="pb-3 flex items-start justify-between gap-3">
               <p className="text-xs text-gray-500">
-                Välj <strong className="text-gray-700">1–5 matcher</strong> · max 30% av saldo per slip
+                Välj <strong className="text-gray-700">1–5 matcher</strong> · max 30&nbsp;% av saldo · låses vid avspark
               </p>
+              <Link href="/regler" className="shrink-0 text-xs text-[var(--primary)] hover:underline">
+                Läs regler
+              </Link>
             </div>
 
             {/* Empty state */}

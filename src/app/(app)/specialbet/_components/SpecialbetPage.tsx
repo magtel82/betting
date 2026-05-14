@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { placeSpecialBetAction, cancelSpecialBetAction } from "../actions";
@@ -77,7 +78,10 @@ function WalletSummary({
           <strong className="tabular-nums text-[var(--primary)]">{placed.toLocaleString("sv-SE")}</strong> placerade ({pct}%)
         </span>
         <span className="text-gray-500">
-          <strong className="tabular-nums text-gray-800">{specialWallet.toLocaleString("sv-SE")}</strong> kvar
+          <strong className="tabular-nums text-gray-800">{specialWallet.toLocaleString("sv-SE")}</strong> kvar ·{" "}
+          <Link href="/regler" className="text-gray-400 hover:text-[var(--primary)] hover:underline">
+            Läs regler
+          </Link>
         </span>
       </div>
     </div>
