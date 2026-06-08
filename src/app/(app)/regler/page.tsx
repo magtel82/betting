@@ -79,7 +79,25 @@ export default async function ReglerPage() {
           </p>
         </Section>
 
-        {/* 4. Deadline och låsning */}
+        {/* 4. Inaktivitetsavgift */}
+        <Section title="Inaktivitetsavgift">
+          <p>
+            Varje dag det spelas matcher måste du ha minst ett{" "}
+            <strong>öppet eller låst matchslip</strong> som innehåller en match
+            den dagen — annars dras <strong>150 🪙</strong> från din
+            match-wallet som inaktivitetsavgift.
+          </p>
+          <p>
+            Du kan lägga ditt slip när som helst under dagen, inklusive strax
+            innan avspark. Avgiften tas ut automatiskt natten efter matchdagen
+            och är idempotent — du kan aldrig debiteras mer än en gång per dag.
+          </p>
+          <p>
+            Avgiften dras aldrig om ditt match-saldo är 0.
+          </p>
+        </Section>
+
+        {/* 5. Deadline och låsning */}
         <Section title="Deadline och låsning">
           <p>
             Olika delar av spelet låses vid olika tidpunkter:
@@ -90,17 +108,17 @@ export default async function ReglerPage() {
               automatiskt vid matchstart.
             </li>
             <li>
-              <span className="font-semibold">Specialbet</span> — låses vid
-              turneringens deadline, vanligtvis före gruppspelsstarten.
+              <span className="font-semibold">Specialbet</span> — deadline var
+              före turneringsstart. Inga specialbet kan längre läggas till,
+              ändras eller tas bort.
             </li>
           </ul>
           <p className="mt-2">
-            Efter att en del låsts går det inte att lägga till, ändra eller
-            ta bort bet i den delen.
+            Efter att ett slip låsts går det inte att göra några ändringar.
           </p>
         </Section>
 
-        {/* 5. Ställning och lika resultat */}
+        {/* 6. Ställning och lika resultat */}
         <Section title="Ställning och lika resultat">
           <p>
             Ställningen rankas efter <strong>totalt antal coins</strong> (match +
@@ -119,7 +137,7 @@ export default async function ReglerPage() {
           </p>
         </Section>
 
-        {/* 6. Oförutsedda händelser */}
+        {/* 7. Oförutsedda händelser */}
         <Section title="Oförutsedda händelser">
           <p>
             Om en match ställs in, skjuts upp eller om turneringsformatet
@@ -132,7 +150,7 @@ export default async function ReglerPage() {
           </p>
         </Section>
 
-        {/* 7. Administration */}
+        {/* 8. Administration */}
         <Section title="Administration" last>
           <p>
             Administratören har sista ordet vid tolkningsfrågor, tekniska
