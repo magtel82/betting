@@ -29,6 +29,7 @@ type ActiveSlip = {
   potential_payout: number;
   selections: Array<{
     match: Array<{
+      scheduled_at: string;
       home_team: Array<{ short_name: string }>;
       away_team: Array<{ short_name: string }>;
     }>;
@@ -66,10 +67,18 @@ export default async function DashboardPage() {
 
   const tournamentId = league?.tournament_id as string | undefined;
 
-  const [slipsRes, matchesRes, marketsRes, betsRes] = await Promise.all([
+  // Today in Stockholm time (CEST = UTC+2 during VM)
+  const todayStockholm = new Date().toLocaleDateString("sv-SE", {
+    timeZone: "Europe/Stockholm",
+  }); // "2026-06-08"
+  const [ty, tm, td] = todayStockholm.split("-").map(Number);
+  const todayStartUTC = new Date(Date.UTC(ty, tm - 1, td, 0, 0, 0) - 2 * 60 * 60 * 1000).toISOString();
+  const todayEndUTC   = new Date(Date.UTC(ty, tm - 1, td + 1, 0, 0, 0) - 2 * 60 * 60 * 1000).toISOString();
+
+  const [slipsRes, matchesRes, marketsRes, betsRes, todayMatchesRes] = await Promise.all([
     supabase
       .from("bet_slips")
-      .select("id, status, stake, potential_payout, selections:bet_slip_selections(match:matches(home_team:teams!matches_home_team_id_fkey(short_name), away_team:teams!matches_away_team_id_fkey(short_name)))")
+      .select("id, status, stake, potential_payout, selections:bet_slip_selections(match:matches(scheduled_at, home_team:teams!matches_home_team_id_fkey(short_name), away_team:teams!matches_away_team_id_fkey(short_name)))")
       .eq("league_member_id", member.id as string)
       .in("status", ["open", "locked"])
       .order("placed_at", { ascending: false }),
@@ -92,11 +101,33 @@ export default async function DashboardPage() {
       .select("market_id, stake")
       .eq("league_member_id", member.id as string)
       .eq("status", "active"),
+    tournamentId
+      ? supabase
+          .from("matches")
+          .select("id")
+          .eq("tournament_id", tournamentId)
+          .neq("status", "void")
+          .gte("scheduled_at", todayStartUTC)
+          .lt("scheduled_at", todayEndUTC)
+          .limit(1)
+      : Promise.resolve({ data: [] }),
   ]);
 
   const openSlips   = (slipsRes.data ?? []) as unknown as ActiveSlip[];
   const rawMatches  = (matchesRes.data ?? []) as unknown as NextMatch[];
   const nextMatches = [...new Map(rawMatches.map((m) => [m.id, m])).values()].slice(0, 3);
+
+  const isTodayMatchday = (todayMatchesRes.data?.length ?? 0) > 0;
+  const hasBetToday = isTodayMatchday && openSlips.some((slip) =>
+    (slip.selections ?? []).some((sel) => {
+      const match = Array.isArray(sel.match) ? sel.match[0] : sel.match;
+      if (!match?.scheduled_at) return false;
+      const matchDate = new Date(match.scheduled_at).toLocaleDateString("sv-SE", {
+        timeZone: "Europe/Stockholm",
+      });
+      return matchDate === todayStockholm;
+    })
+  );
   const markets     = marketsRes.data ?? [];
   const activeBets  = betsRes.data ?? [];
 
@@ -163,6 +194,27 @@ export default async function DashboardPage() {
           </svg>
           Lägg ett nytt slip
         </Link>
+
+        {/* ── Daglig bet-varning ────────────────────────────────────────────── */}
+        {isTodayMatchday && !hasBetToday && (
+          <Link
+            href="/bet"
+            className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 transition-colors hover:bg-amber-100 active:bg-amber-100"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-lg leading-none text-amber-500" aria-hidden>⚠</span>
+              <div>
+                <p className="text-sm font-semibold text-amber-900">Ingen bet idag</p>
+                <p className="text-xs text-amber-700">Du riskerar 150 coins i inaktivitetsavgift</p>
+              </div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                 strokeLinecap="round" strokeLinejoin="round"
+                 className="h-4 w-4 shrink-0 text-amber-400" aria-hidden>
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </Link>
+        )}
 
         {/* ── Aktiva slip ───────────────────────────────────────────────────── */}
         <section>

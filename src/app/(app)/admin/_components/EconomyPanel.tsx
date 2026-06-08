@@ -89,7 +89,7 @@ function FeeSection({ defaultFeeDate }: { defaultFeeDate: string }) {
     <div className="space-y-2">
       <p className="text-sm font-medium text-gray-700">Inaktivitetsavgift</p>
       <p className="text-xs text-gray-500">
-        Drar 50 coins (max saldo) från inaktiva spelare på angiven matchdag.
+        Drar 150 coins (max saldo) från inaktiva spelare på angiven matchdag.
         Idempotent per dag — körs inte dubbelt.
       </p>
       <div className="flex items-center gap-2">

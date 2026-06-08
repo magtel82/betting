@@ -13,6 +13,9 @@
 
 import { syncResults } from "@/lib/sync/results";
 import { writeSyncLog } from "@/lib/sync/log";
+import { applyInactivityFee } from "@/lib/betting/inactivity-fee";
+
+const LEAGUE_ID = "b1000000-0000-0000-0000-000000000001";
 
 // Vercel Pro: upp till 300 s. Sätt 60 s för säkerhetsmarginal.
 export const maxDuration = 60;
@@ -40,6 +43,14 @@ async function handleSync(request: Request): Promise<Response> {
       console.error("[sync/results] Errors:\n" + result.errors.join("\n"));
     }
     await writeSyncLog("results", result, durationMs);
+
+    // Apply inactivity fee for yesterday (Stockholm time).
+    // Cron runs at 06:00 UTC = 08:00 Stockholm — all previous day's matches are done.
+    const yesterdayStockholm = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      .toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm" });
+    const feeResult = await applyInactivityFee(LEAGUE_ID, yesterdayStockholm);
+    console.log("[sync/results] Inactivity fee:", JSON.stringify(feeResult));
+
     const httpStatus =
       result.updated > 0 || result.errors.length === 0 ? 200 : 500;
     return Response.json(result, { status: httpStatus });
