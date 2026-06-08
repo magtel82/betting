@@ -13,11 +13,12 @@ const DEFAULT_COMPETITION_ID = parseInt(
 // ─── Response types ───────────────────────────────────────────────────────────
 
 export interface FDTeam {
-  id:        number;
-  name:      string;
-  shortName: string;
-  tla:       string;       // 3-letter abbreviation, e.g. "GER"
-  crest:     string;
+  // All fields are null for undetermined knockout fixtures (TBD slots).
+  id:        number | null;
+  name:      string | null;
+  shortName: string | null;
+  tla:       string | null;       // 3-letter abbreviation, e.g. "GER"
+  crest:     string | null;
 }
 
 export interface FDScore {

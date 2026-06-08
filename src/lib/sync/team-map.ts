@@ -101,8 +101,10 @@ export const TEAM_NAME_TO_SHORT: Record<string, string> = {
   "Panama":                   "PAN",
 };
 
-// Case-insensitive lookup.
-export function resolveTeamShortName(apiName: string): string | null {
+// Case-insensitive lookup. Null-safe: football-data returns null team names
+// for undetermined knockout fixtures (e.g. "Winner Group A" / TBD slots).
+export function resolveTeamShortName(apiName: string | null | undefined): string | null {
+  if (!apiName) return null;
   const direct = TEAM_NAME_TO_SHORT[apiName];
   if (direct) return direct;
   const lower = apiName.toLowerCase();
@@ -205,8 +207,9 @@ export const TEAM_NAME_TO_DB: Record<string, string> = {
   "Kosovo":                    "Kosovo",
 };
 
-// Case-insensitive lookup. Returns null and logs a warning if name is unknown.
-export function resolveTeamDbName(apiName: string): string | null {
+// Case-insensitive lookup. Returns null if name is unknown or null/undefined.
+export function resolveTeamDbName(apiName: string | null | undefined): string | null {
+  if (!apiName) return null;
   const direct = TEAM_NAME_TO_DB[apiName];
   if (direct) return direct;
   const lower = apiName.toLowerCase();
