@@ -1,20 +1,13 @@
 import { requireActiveUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TopBar } from "@/components/nav/TopBar";
-import Link from "next/link";
 import { StallningTabs } from "../_components/StallningTabs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ProfileRow = { display_name: string; email: string | null };
-
-type MemberRow = {
-  id: string;
-  user_id: string;
-  profile: ProfileRow | ProfileRow[] | null;
-};
-
-type SlipRow = {
+type MemberRow  = { id: string; user_id: string; profile: ProfileRow | ProfileRow[] | null };
+type SlipRow    = {
   id: string;
   league_member_id: string;
   stake: number;
@@ -23,19 +16,11 @@ type SlipRow = {
   status: "won" | "lost" | "cancelled";
   settled_at: string | null;
 };
+type FeeRow = { league_member_id: string; amount: number };
 
-type FeeRow = {
-  league_member_id: string;
-  amount: number;
-};
+type Stat = { names: string[]; value: string; detail?: string } | null;
 
-type ShameWinner = {
-  names: string[];
-  value: string;
-  detail?: string;
-} | null;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Name helper ──────────────────────────────────────────────────────────────
 
 function memberName(profile: ProfileRow | ProfileRow[] | null): string {
   const p = Array.isArray(profile) ? (profile[0] ?? null) : profile;
@@ -46,37 +31,43 @@ function memberName(profile: ProfileRow | ProfileRow[] | null): string {
   return prefix ? prefix.charAt(0).toUpperCase() + prefix.slice(1) : "Okänd";
 }
 
-// ─── Per-player stats ─────────────────────────────────────────────────────────
+// ─── Per-player aggregates ────────────────────────────────────────────────────
 
 type PlayerData = {
   id: string;
   name: string;
+  // fees & cancels
   feeCount: number;
   feeTotal: number;
   cancelCount: number;
+  // settled slip counts
   settledCount: number;
-  lostCount: number;
   wonCount: number;
+  lostCount: number;
+  // rates
   roi: number | null;
   winRate: number | null;
   avgOdds: number | null;
-  biggestLostStake: number;
-  lowestLostOdds: number;   // Infinity if no lost slips
-  highestLostOdds: number;  // 0 if no lost slips
+  // streaks
+  winStreak: number;
   loseStreak: number;
+  // loss metrics
+  biggestLostStake: number;
+  lowestLostOdds: number;    // Infinity if no lost slips
+  highestLostOdds: number;   // 0 if no lost slips
+  // win metrics
+  biggestWonPayout: number;  // 0 if no won slips
+  highestWonOdds: number;    // 0 if no won slips
+  lowestWonOdds: number;     // Infinity if no won slips
 };
 
-function buildPlayerData(
-  members: MemberRow[],
-  slips: SlipRow[],
-  fees: FeeRow[],
-): PlayerData[] {
-  const byMember = new Map<string, SlipRow[]>();
-  for (const m of members) byMember.set(m.id, []);
-  for (const s of slips) byMember.get(s.league_member_id)?.push(s);
-
+function buildPlayerData(members: MemberRow[], slips: SlipRow[], fees: FeeRow[]): PlayerData[] {
+  const byMember   = new Map<string, SlipRow[]>();
   const feeCounts  = new Map<string, number>();
   const feeAmounts = new Map<string, number>();
+
+  for (const m of members) byMember.set(m.id, []);
+  for (const s of slips)   byMember.get(s.league_member_id)?.push(s);
   for (const f of fees) {
     feeCounts.set(f.league_member_id,  (feeCounts.get(f.league_member_id)  ?? 0) + 1);
     feeAmounts.set(f.league_member_id, (feeAmounts.get(f.league_member_id) ?? 0) + Math.abs(f.amount));
@@ -89,26 +80,18 @@ function buildPlayerData(
     const settled = all
       .filter((s) => s.status === "won" || s.status === "lost")
       .sort((a, b) => new Date(a.settled_at ?? 0).getTime() - new Date(b.settled_at ?? 0).getTime());
-    const lost      = settled.filter((s) => s.status === "lost");
     const won       = settled.filter((s) => s.status === "won");
+    const lost      = settled.filter((s) => s.status === "lost");
     const cancelled = all.filter((s) => s.status === "cancelled");
 
-    const totalStaked  = settled.reduce((s, r) => s + r.stake, 0);
-    const totalPayout  = won.reduce((s, r) => s + Math.floor(r.stake * (r.final_odds ?? r.combined_odds)), 0);
-    const roi          = totalStaked > 0 ? ((totalPayout - totalStaked) / totalStaked) * 100 : null;
-    const winRate      = settled.length > 0 ? (won.length / settled.length) * 100 : null;
-    const avgOdds      = settled.length > 0
-      ? settled.reduce((s, r) => s + r.combined_odds, 0) / settled.length
-      : null;
+    const totalStaked = settled.reduce((s, r) => s + r.stake, 0);
+    const totalPayout = won.reduce((s, r) => s + Math.floor(r.stake * (r.final_odds ?? r.combined_odds)), 0);
 
-    const biggestLostStake = lost.reduce((max, r) => Math.max(max, r.stake), 0);
-    const lowestLostOdds   = lost.reduce((min, r) => Math.min(min, r.combined_odds), Infinity);
-    const highestLostOdds  = lost.reduce((max, r) => Math.max(max, r.combined_odds), 0);
-
-    let maxStreak = 0, cur = 0;
+    // Streaks
+    let winStreak = 0, loseStreak = 0, curW = 0, curL = 0;
     for (const s of settled) {
-      if (s.status === "lost") { cur++; if (cur > maxStreak) maxStreak = cur; }
-      else cur = 0;
+      if (s.status === "won")  { curW++; curL = 0; if (curW > winStreak)  winStreak  = curW; }
+      else                     { curL++; curW = 0; if (curL > loseStreak) loseStreak = curL; }
     }
 
     return {
@@ -117,141 +100,157 @@ function buildPlayerData(
       feeTotal:  feeAmounts.get(m.id) ?? 0,
       cancelCount: cancelled.length,
       settledCount: settled.length,
-      lostCount:  lost.length,
-      wonCount:   won.length,
-      roi, winRate, avgOdds,
-      biggestLostStake,
-      lowestLostOdds,
-      highestLostOdds,
-      loseStreak: maxStreak,
+      wonCount:  won.length,
+      lostCount: lost.length,
+      roi:      totalStaked > 0 ? ((totalPayout - totalStaked) / totalStaked) * 100 : null,
+      winRate:  settled.length > 0 ? (won.length / settled.length) * 100 : null,
+      avgOdds:  settled.length > 0 ? settled.reduce((s, r) => s + r.combined_odds, 0) / settled.length : null,
+      winStreak, loseStreak,
+      biggestLostStake: lost.reduce((max, r) => Math.max(max, r.stake), 0),
+      lowestLostOdds:   lost.reduce((min, r) => Math.min(min, r.combined_odds), Infinity),
+      highestLostOdds:  lost.reduce((max, r) => Math.max(max, r.combined_odds), 0),
+      biggestWonPayout: won.reduce((max, r) => Math.max(max, Math.floor(r.stake * (r.final_odds ?? r.combined_odds))), 0),
+      highestWonOdds:   won.reduce((max, r) => Math.max(max, r.combined_odds), 0),
+      lowestWonOdds:    won.reduce((min, r) => Math.min(min, r.combined_odds), Infinity),
     };
   });
 }
 
 // ─── Tied-winner helper ───────────────────────────────────────────────────────
-// Returns all players that share the worst score (ties included).
 
-function shameWinner(
+function stat(
   players: PlayerData[],
   filter: (p: PlayerData) => boolean,
   metric: (p: PlayerData) => number,
   direction: "min" | "max",
-  format: (metric: number, first: PlayerData) => { value: string; detail?: string },
-): ShameWinner {
+  format: (score: number, first: PlayerData) => { value: string; detail?: string },
+): Stat {
   const eligible = players.filter(filter);
   if (eligible.length === 0) return null;
-
-  const scored = eligible.map((p) => ({ p, score: metric(p) }));
-  const worst  = direction === "min"
-    ? Math.min(...scored.map((s) => s.score))
-    : Math.max(...scored.map((s) => s.score));
-
-  const tied = scored.filter((s) => s.score === worst).map((s) => s.p);
-  const { value, detail } = format(worst, tied[0]);
+  const scores = eligible.map((p) => ({ p, score: metric(p) }));
+  const best   = direction === "max"
+    ? Math.max(...scores.map((s) => s.score))
+    : Math.min(...scores.map((s) => s.score));
+  const tied = scores.filter((s) => s.score === best).map((s) => s.p);
+  const { value, detail } = format(best, tied[0]);
   return { names: tied.map((p) => p.name), value, detail };
 }
 
-// ─── Compute all shame categories ────────────────────────────────────────────
+// ─── Category definitions ─────────────────────────────────────────────────────
 
-type ShameStats = {
-  feeCount:      ShameWinner;
-  cancelCount:   ShameWinner;
-  worstRoi:      ShameWinner;
-  worstWinRate:  ShameWinner;
-  biggestLoss:   ShameWinner;
-  mostDefensive: ShameWinner;
-  favouriteFail: ShameWinner;
-  biggestRisk:   ShameWinner;
-  loseStreak:    ShameWinner;
-};
+function buildCategories(players: PlayerData[]) {
+  const honor: { emoji: string; title: string; description: string; stat: Stat }[] = [
+    {
+      emoji: "📈",
+      title: "Bäst ROI",
+      description: "Bäst avkastning på insatser",
+      stat: stat(players, (p) => p.roi !== null, (p) => p.roi!, "max",
+        (v) => ({ value: `${v >= 0 ? "+" : ""}${v.toFixed(0)}%` })),
+    },
+    {
+      emoji: "💰",
+      title: "Bästa bet",
+      description: "Högsta utbetalning på ett enskilt slip",
+      stat: stat(players, (p) => p.biggestWonPayout > 0, (p) => p.biggestWonPayout, "max",
+        (v) => ({ value: `+${v.toLocaleString("sv-SE")} coins` })),
+    },
+    {
+      emoji: "🔥",
+      title: "Längsta vinnarserie",
+      description: "Flest vinster i rad",
+      stat: stat(players, (p) => p.winStreak >= 2, (p) => p.winStreak, "max",
+        (v) => ({ value: `${v} i rad` })),
+    },
+    {
+      emoji: "🎯",
+      title: "Vågad & rätt",
+      description: "Högst odds på ett vunnet slip — tog chansen",
+      stat: stat(players, (p) => p.highestWonOdds > 0, (p) => p.highestWonOdds, "max",
+        (v) => ({ value: `${v.toFixed(2)}x`, detail: "och vann!" })),
+    },
+    {
+      emoji: "😎",
+      title: "Bäst vinstprocent",
+      description: "Vinner mest — minst 3 slip krävs",
+      stat: stat(players, (p) => p.winRate !== null && p.settledCount >= 3, (p) => p.winRate!, "max",
+        (v, p) => ({ value: `${v.toFixed(0)}% vunna`, detail: `${p.wonCount} av ${p.settledCount} slip` })),
+    },
+    {
+      emoji: "🧠",
+      title: "Säkrast & rätt",
+      description: "Lägst odds på ett vunnet slip — kallt huvud",
+      stat: stat(players, (p) => p.lowestWonOdds < Infinity, (p) => p.lowestWonOdds, "min",
+        (v) => ({ value: `${v.toFixed(2)}x`, detail: "vann ändå" })),
+    },
+  ];
 
-function computeShame(players: PlayerData[]): ShameStats {
-  const sw = shameWinner;
-  return {
-    feeCount: sw(
-      players,
-      (p) => p.feeCount > 0,
-      (p) => p.feeCount,
-      "max",
-      (v, p) => ({ value: `${v} avgifter`, detail: `−${p.feeTotal.toLocaleString("sv-SE")} coins totalt` }),
-    ),
+  const shame: { emoji: string; title: string; description: string; stat: Stat }[] = [
+    {
+      emoji: "🥱",
+      title: "Flest avgifter",
+      description: "Glömde betta flest gånger",
+      stat: stat(players, (p) => p.feeCount > 0, (p) => p.feeCount, "max",
+        (v, p) => ({ value: `${v} avgifter`, detail: `−${p.feeTotal.toLocaleString("sv-SE")} coins totalt` })),
+    },
+    {
+      emoji: "🔁",
+      title: "Ångerbuk",
+      description: "Flest annullerade slip",
+      stat: stat(players, (p) => p.cancelCount > 0, (p) => p.cancelCount, "max",
+        (v) => ({ value: `${v} annulleringar` })),
+    },
+    {
+      emoji: "📉",
+      title: "Sämst ROI",
+      description: "Sämst avkastning på insatser",
+      stat: stat(players, (p) => p.roi !== null, (p) => p.roi!, "min",
+        (v) => ({ value: `${v >= 0 ? "+" : ""}${v.toFixed(0)}%` })),
+    },
+    {
+      emoji: "😩",
+      title: "Sämst vinstprocent",
+      description: "Förlorar mest — minst 3 slip krävs",
+      stat: stat(players, (p) => p.winRate !== null && p.settledCount >= 3, (p) => p.winRate!, "min",
+        (v, p) => ({ value: `${v.toFixed(0)}% vunna`, detail: `${p.wonCount} av ${p.settledCount} slip` })),
+    },
+    {
+      emoji: "💸",
+      title: "Dyraste miss",
+      description: "Störst insats på ett enda förlorat slip",
+      stat: stat(players, (p) => p.biggestLostStake > 0, (p) => p.biggestLostStake, "max",
+        (v) => ({ value: `−${v.toLocaleString("sv-SE")} coins` })),
+    },
+    {
+      emoji: "🐢",
+      title: "Saftigast",
+      description: "Lägst snittodds — tar aldrig risker",
+      stat: stat(players, (p) => p.avgOdds !== null && p.settledCount >= 2, (p) => p.avgOdds!, "min",
+        (v, p) => ({ value: `${v.toFixed(2)}x snittodds`, detail: `${p.settledCount} avgjorda slip` })),
+    },
+    {
+      emoji: "🤦",
+      title: "Förlorade på favorit",
+      description: "Lägst odds på ett förlorat slip",
+      stat: stat(players, (p) => p.lowestLostOdds < Infinity, (p) => p.lowestLostOdds, "min",
+        (v) => ({ value: `${v.toFixed(2)}x`, detail: "lägst odds på ett förlorat slip" })),
+    },
+    {
+      emoji: "🎲",
+      title: "Stor risk, inget resultat",
+      description: "Högst odds på ett förlorat slip",
+      stat: stat(players, (p) => p.highestLostOdds > 0, (p) => p.highestLostOdds, "max",
+        (v) => ({ value: `${v.toFixed(2)}x`, detail: "högst odds på ett förlorat slip" })),
+    },
+    {
+      emoji: "❌",
+      title: "Längsta förlorarserie",
+      description: "Flest förluster i rad",
+      stat: stat(players, (p) => p.loseStreak >= 2, (p) => p.loseStreak, "max",
+        (v) => ({ value: `${v} i rad` })),
+    },
+  ];
 
-    cancelCount: sw(
-      players,
-      (p) => p.cancelCount > 0,
-      (p) => p.cancelCount,
-      "max",
-      (v) => ({ value: `${v} annulleringar` }),
-    ),
-
-    worstRoi: sw(
-      players,
-      (p) => p.roi !== null,
-      (p) => p.roi!,
-      "min",
-      (v) => ({ value: `${v >= 0 ? "+" : ""}${v.toFixed(0)}%` }),
-    ),
-
-    worstWinRate: sw(
-      players,
-      (p) => p.winRate !== null && p.settledCount >= 3,
-      (p) => p.winRate!,
-      "min",
-      (v, p) => ({
-        value: `${v.toFixed(0)}% vunna`,
-        detail: `${p.wonCount} vunna av ${p.settledCount} slip`,
-      }),
-    ),
-
-    biggestLoss: sw(
-      players,
-      (p) => p.biggestLostStake > 0,
-      (p) => p.biggestLostStake,
-      "max",
-      (v) => ({ value: `−${v.toLocaleString("sv-SE")} coins` }),
-    ),
-
-    mostDefensive: sw(
-      players,
-      (p) => p.avgOdds !== null && p.settledCount >= 2,
-      (p) => p.avgOdds!,
-      "min",
-      (v, p) => ({
-        value: `${v.toFixed(2)}x snittodds`,
-        detail: `${p.settledCount} avgjorda slip`,
-      }),
-    ),
-
-    favouriteFail: sw(
-      players,
-      (p) => p.lowestLostOdds < Infinity,
-      (p) => p.lowestLostOdds,
-      "min",
-      (v) => ({
-        value: `${v.toFixed(2)}x`,
-        detail: "lägst odds på ett förlorat slip",
-      }),
-    ),
-
-    biggestRisk: sw(
-      players,
-      (p) => p.highestLostOdds > 0,
-      (p) => p.highestLostOdds,
-      "max",
-      (v) => ({
-        value: `${v.toFixed(2)}x`,
-        detail: "högst odds på ett förlorat slip",
-      }),
-    ),
-
-    loseStreak: sw(
-      players,
-      (p) => p.loseStreak >= 2,
-      (p) => p.loseStreak,
-      "max",
-      (v) => ({ value: `${v} i rad` }),
-    ),
-  };
+  return { honor, shame };
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -271,7 +270,7 @@ export default async function SkamsPage() {
   if (!member) {
     return (
       <>
-        <TopBar title="Skäms-lista" />
+        <TopBar title="Ställning" />
         <div className="mx-auto max-w-lg px-4 py-16 text-center">
           <p className="text-sm text-gray-400">Du är inte med i någon liga.</p>
         </div>
@@ -285,108 +284,78 @@ export default async function SkamsPage() {
     .eq("league_id", member.league_id as string)
     .eq("is_active", true);
 
-  const members  = (rawMembers ?? []) as unknown as MemberRow[];
+  const members   = (rawMembers ?? []) as unknown as MemberRow[];
   const memberIds = members.map((m) => m.id);
 
   const [slipsRes, feesRes] = await Promise.all([
     memberIds.length > 0
-      ? admin
-          .from("bet_slips")
+      ? admin.from("bet_slips")
           .select("id, league_member_id, stake, combined_odds, final_odds, status, settled_at")
           .in("league_member_id", memberIds)
           .in("status", ["won", "lost", "cancelled"])
       : { data: [] },
     memberIds.length > 0
-      ? admin
-          .from("match_wallet_transactions")
+      ? admin.from("match_wallet_transactions")
           .select("league_member_id, amount")
           .in("league_member_id", memberIds)
           .eq("type", "inactivity_fee")
       : { data: [] },
   ]);
 
-  const slips   = (slipsRes.data  ?? []) as unknown as SlipRow[];
-  const fees    = (feesRes.data   ?? []) as unknown as FeeRow[];
-  const players = buildPlayerData(members, slips, fees);
-  const stats   = computeShame(players);
+  const players = buildPlayerData(
+    members,
+    (slipsRes.data ?? []) as unknown as SlipRow[],
+    (feesRes.data  ?? []) as unknown as FeeRow[],
+  );
 
-  const categories: { emoji: string; title: string; description: string; winner: ShameWinner }[] = [
-    {
-      emoji: "🥱",
-      title: "Flest avgifter",
-      description: "Glömde betta flest gånger",
-      winner: stats.feeCount,
-    },
-    {
-      emoji: "🔁",
-      title: "Ångerbuk",
-      description: "Flest annullerade slip",
-      winner: stats.cancelCount,
-    },
-    {
-      emoji: "📉",
-      title: "Sämst ROI",
-      description: "Sämst avkastning på insatser",
-      winner: stats.worstRoi,
-    },
-    {
-      emoji: "😩",
-      title: "Sämst vinstprocent",
-      description: "Förlorar mest — minst 3 slip krävs",
-      winner: stats.worstWinRate,
-    },
-    {
-      emoji: "💸",
-      title: "Dyraste miss",
-      description: "Störst insats på ett enda förlorat slip",
-      winner: stats.biggestLoss,
-    },
-    {
-      emoji: "🐢",
-      title: "Saftigast",
-      description: "Lägst snittodds — tar aldrig risker",
-      winner: stats.mostDefensive,
-    },
-    {
-      emoji: "🤦",
-      title: "Förlorade på favorit",
-      description: "Lägst odds på ett förlorat slip",
-      winner: stats.favouriteFail,
-    },
-    {
-      emoji: "🎲",
-      title: "Stor risk, inget resultat",
-      description: "Högst odds på ett förlorat slip",
-      winner: stats.biggestRisk,
-    },
-    {
-      emoji: "❌",
-      title: "Längsta förlorarserie",
-      description: "Flest förluster i rad",
-      winner: stats.loseStreak,
-    },
-  ];
+  const { honor, shame } = buildCategories(players);
 
   return (
     <>
       <TopBar title="Ställning" />
-      <div className="mx-auto max-w-lg space-y-4 px-4 py-5">
+      <div className="mx-auto max-w-lg space-y-5 px-4 py-5">
 
         <StallningTabs />
 
-        <div
-          className="overflow-hidden rounded-2xl p-5 text-white shadow-lg"
-          style={{ background: "linear-gradient(135deg, #450a0a 0%, #7f1d1d 50%, #991b1b 100%)" }}
-        >
-          <p className="text-2xl font-bold">💀 Skäms-lista</p>
-          <p className="mt-1 text-sm text-red-200">Vem är turneringens största skam?</p>
-        </div>
+        {/* ── Heder ─────────────────────────────────────────────────────────── */}
+        <section>
+          <div
+            className="mb-3 flex items-center gap-2 rounded-xl px-4 py-3 text-white"
+            style={{ background: "linear-gradient(135deg, #14532d 0%, #166534 60%, #15803d 100%)" }}
+          >
+            <span className="text-xl" aria-hidden>🏆</span>
+            <div>
+              <p className="font-bold">Heder</p>
+              <p className="text-xs text-green-200">Turneringens bästa prestationer</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {honor.map((cat) => (
+              <StatCard key={cat.title} emoji={cat.emoji} title={cat.title}
+                description={cat.description} stat={cat.stat} variant="honor" />
+            ))}
+          </div>
+        </section>
 
-        <div className="space-y-2">
-          {categories.map((cat) => (
-            <ShameCard key={cat.title} {...cat} />
-          ))}
-        </div>
+        {/* ── Skäms ─────────────────────────────────────────────────────────── */}
+        <section>
+          <div
+            className="mb-3 flex items-center gap-2 rounded-xl px-4 py-3 text-white"
+            style={{ background: "linear-gradient(135deg, #450a0a 0%, #7f1d1d 60%, #991b1b 100%)" }}
+          >
+            <span className="text-xl" aria-hidden>💀</span>
+            <div>
+              <p className="font-bold">Skäms</p>
+              <p className="text-xs text-red-200">Turneringens största skam</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {shame.map((cat) => (
+              <StatCard key={cat.title} emoji={cat.emoji} title={cat.title}
+                description={cat.description} stat={cat.stat} variant="shame" />
+            ))}
+          </div>
+        </section>
 
         <p className="pb-2 text-center text-[11px] text-gray-300">
           Statistik baseras på avgjorda matchslip.
@@ -397,19 +366,18 @@ export default async function SkamsPage() {
   );
 }
 
-// ─── ShameCard ────────────────────────────────────────────────────────────────
+// ─── StatCard ─────────────────────────────────────────────────────────────────
 
-function ShameCard({
-  emoji,
-  title,
-  description,
-  winner,
+function StatCard({
+  emoji, title, description, stat, variant,
 }: {
   emoji: string;
   title: string;
   description: string;
-  winner: ShameWinner;
+  stat: Stat;
+  variant: "honor" | "shame";
 }) {
+  const valueColor = variant === "honor" ? "text-[var(--win)]" : "text-[var(--loss)]";
   return (
     <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
       <div className="flex items-center gap-2 border-b border-gray-50 bg-gray-50 px-4 py-2">
@@ -420,18 +388,16 @@ function ShameCard({
         </div>
       </div>
       <div className="flex items-center justify-between gap-3 px-4 py-3">
-        {winner ? (
+        {stat ? (
           <>
             <div className="min-w-0">
-              {winner.names.map((name) => (
+              {stat.names.map((name) => (
                 <p key={name} className="truncate text-sm font-semibold text-gray-900">{name}</p>
               ))}
             </div>
             <div className="shrink-0 text-right">
-              <p className="tabular-nums text-sm font-bold text-[var(--loss)]">{winner.value}</p>
-              {winner.detail && (
-                <p className="text-[11px] text-gray-400">{winner.detail}</p>
-              )}
+              <p className={`tabular-nums text-sm font-bold ${valueColor}`}>{stat.value}</p>
+              {stat.detail && <p className="text-[11px] text-gray-400">{stat.detail}</p>}
             </div>
           </>
         ) : (
