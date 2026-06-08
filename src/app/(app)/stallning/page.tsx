@@ -1,5 +1,6 @@
 import { requireActiveUser } from "@/lib/auth";
 import { TopBar } from "@/components/nav/TopBar";
+import Link from "next/link";
 
 // ─── Local types ──────────────────────────────────────────────────────────────
 
@@ -374,9 +375,14 @@ export default async function StallningPage() {
 
             {/* Skam */}
             <section>
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                <span aria-hidden>💀</span> Skam
-              </h2>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                  <span aria-hidden>💀</span> Skam
+                </h2>
+                <Link href="/stallning/skams" className="text-xs font-semibold text-[var(--primary)] hover:underline">
+                  Hela skäms-listan →
+                </Link>
+              </div>
               <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
                 <StatRow
                   label="Sämst ROI"
