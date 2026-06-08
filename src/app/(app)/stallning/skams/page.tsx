@@ -2,6 +2,7 @@ import { requireActiveUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TopBar } from "@/components/nav/TopBar";
 import Link from "next/link";
+import { StallningTabs } from "../_components/StallningTabs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -368,14 +369,10 @@ export default async function SkamsPage() {
 
   return (
     <>
-      <TopBar title="Skäms-lista" />
+      <TopBar title="Ställning" />
       <div className="mx-auto max-w-lg space-y-4 px-4 py-5">
 
-        <div className="flex items-center justify-between">
-          <Link href="/stallning" className="text-sm font-semibold text-[var(--primary)]">
-            ← Ställning
-          </Link>
-        </div>
+        <StallningTabs />
 
         <div
           className="overflow-hidden rounded-2xl p-5 text-white shadow-lg"
