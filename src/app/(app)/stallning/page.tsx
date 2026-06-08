@@ -335,6 +335,25 @@ export default async function StallningPage() {
           </div>
         </section>
 
+        {/* ── Skäms-lista-länk — alltid synlig ─────────────────────────────── */}
+        <Link
+          href="/stallning/skams"
+          className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm transition-colors hover:bg-gray-50"
+        >
+          <div className="flex items-center gap-2.5">
+            <span className="text-lg leading-none" aria-hidden>💀</span>
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Skäms-lista</p>
+              <p className="text-xs text-gray-400">Vem är turneringens största skam?</p>
+            </div>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+               strokeLinecap="round" strokeLinejoin="round"
+               className="h-4 w-4 shrink-0 text-gray-300" aria-hidden>
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </Link>
+
         {/* ── Statistik — döljs helt tills det finns avgjorda slip ─────────── */}
         {hasStats && (
           <>

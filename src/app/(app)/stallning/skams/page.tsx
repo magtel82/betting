@@ -21,13 +21,18 @@ type SlipRow = {
   final_odds: number | null;
   status: "won" | "lost" | "cancelled";
   settled_at: string | null;
-  placed_at: string;
 };
 
 type FeeRow = {
   league_member_id: string;
   amount: number;
 };
+
+type ShameWinner = {
+  names: string[];
+  value: string;
+  detail?: string;
+} | null;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,74 +45,58 @@ function memberName(profile: ProfileRow | ProfileRow[] | null): string {
   return prefix ? prefix.charAt(0).toUpperCase() + prefix.slice(1) : "Okänd";
 }
 
-// ─── Stats ────────────────────────────────────────────────────────────────────
+// ─── Per-player stats ─────────────────────────────────────────────────────────
 
-type ShameWinner = { name: string; value: string; detail?: string } | null;
-
-type ShameStats = {
-  feeCount:     ShameWinner;  // flest inaktivitetsavgifter
-  cancelCount:  ShameWinner;  // flest annullerade slip
-  worstRoi:     ShameWinner;  // sämst ROI
-  worstWinRate: ShameWinner;  // sämst vinstprocent
-  biggestLoss:  ShameWinner;  // dyraste enskilda förlust
-  mostDefensive:ShameWinner;  // lägst snittodds (saftigast)
-  favouriteFail:ShameWinner;  // förlorade slip med lägst kombinations-odds
-  biggestRisk:  ShameWinner;  // högst odds på ett förlorat slip
-  loseStreak:   ShameWinner;  // längsta förlorarserie
+type PlayerData = {
+  id: string;
+  name: string;
+  feeCount: number;
+  feeTotal: number;
+  cancelCount: number;
+  settledCount: number;
+  lostCount: number;
+  wonCount: number;
+  roi: number | null;
+  winRate: number | null;
+  avgOdds: number | null;
+  biggestLostStake: number;
+  lowestLostOdds: number;   // Infinity if no lost slips
+  highestLostOdds: number;  // 0 if no lost slips
+  loseStreak: number;
 };
 
-function computeShame(
+function buildPlayerData(
   members: MemberRow[],
   slips: SlipRow[],
   fees: FeeRow[],
-): ShameStats {
-  // Group by member
+): PlayerData[] {
   const byMember = new Map<string, SlipRow[]>();
   for (const m of members) byMember.set(m.id, []);
   for (const s of slips) byMember.get(s.league_member_id)?.push(s);
 
-  const feeCounts = new Map<string, number>();
+  const feeCounts  = new Map<string, number>();
   const feeAmounts = new Map<string, number>();
   for (const f of fees) {
-    feeCounts.set(f.league_member_id, (feeCounts.get(f.league_member_id) ?? 0) + 1);
+    feeCounts.set(f.league_member_id,  (feeCounts.get(f.league_member_id)  ?? 0) + 1);
     feeAmounts.set(f.league_member_id, (feeAmounts.get(f.league_member_id) ?? 0) + Math.abs(f.amount));
   }
 
-  // Per-player stats
-  type PlayerData = {
-    id: string;
-    name: string;
-    feeCount: number;
-    feeTotal: number;
-    cancelCount: number;
-    settled: SlipRow[];
-    lost: SlipRow[];
-    won: SlipRow[];
-    roi: number | null;
-    winRate: number | null;
-    avgOdds: number | null;
-    biggestLostStake: number;
-    lowestLostOdds: number;
-    highestLostOdds: number;
-    loseStreak: number;
-  };
-
-  const players: PlayerData[] = members.map((m) => {
+  return members.map((m) => {
     const name = memberName(m.profile);
-    const all = byMember.get(m.id) ?? [];
-    const settled = all.filter((s) => s.status === "won" || s.status === "lost")
+    const all  = byMember.get(m.id) ?? [];
+
+    const settled = all
+      .filter((s) => s.status === "won" || s.status === "lost")
       .sort((a, b) => new Date(a.settled_at ?? 0).getTime() - new Date(b.settled_at ?? 0).getTime());
-    const lost = settled.filter((s) => s.status === "lost");
-    const won  = settled.filter((s) => s.status === "won");
+    const lost      = settled.filter((s) => s.status === "lost");
+    const won       = settled.filter((s) => s.status === "won");
     const cancelled = all.filter((s) => s.status === "cancelled");
 
-    const totalStaked = settled.reduce((s, r) => s + r.stake, 0);
-    const totalPayout = won.reduce((s, r) => s + Math.floor(r.stake * (r.final_odds ?? r.combined_odds)), 0);
-    const roi = totalStaked > 0 ? ((totalPayout - totalStaked) / totalStaked) * 100 : null;
-
-    const winRate = settled.length > 0 ? (won.length / settled.length) * 100 : null;
-
-    const avgOdds = settled.length > 0
+    const totalStaked  = settled.reduce((s, r) => s + r.stake, 0);
+    const totalPayout  = won.reduce((s, r) => s + Math.floor(r.stake * (r.final_odds ?? r.combined_odds)), 0);
+    const roi          = totalStaked > 0 ? ((totalPayout - totalStaked) / totalStaked) * 100 : null;
+    const winRate      = settled.length > 0 ? (won.length / settled.length) * 100 : null;
+    const avgOdds      = settled.length > 0
       ? settled.reduce((s, r) => s + r.combined_odds, 0) / settled.length
       : null;
 
@@ -115,7 +104,6 @@ function computeShame(
     const lowestLostOdds   = lost.reduce((min, r) => Math.min(min, r.combined_odds), Infinity);
     const highestLostOdds  = lost.reduce((max, r) => Math.max(max, r.combined_odds), 0);
 
-    // Longest lose streak
     let maxStreak = 0, cur = 0;
     for (const s of settled) {
       if (s.status === "lost") { cur++; if (cur > maxStreak) maxStreak = cur; }
@@ -123,126 +111,144 @@ function computeShame(
     }
 
     return {
-      id: m.id,
-      name,
-      feeCount:  feeCounts.get(m.id) ?? 0,
+      id: m.id, name,
+      feeCount:  feeCounts.get(m.id)  ?? 0,
       feeTotal:  feeAmounts.get(m.id) ?? 0,
       cancelCount: cancelled.length,
-      settled, lost, won,
-      roi,
-      winRate,
-      avgOdds,
+      settledCount: settled.length,
+      lostCount:  lost.length,
+      wonCount:   won.length,
+      roi, winRate, avgOdds,
       biggestLostStake,
       lowestLostOdds,
       highestLostOdds,
       loseStreak: maxStreak,
     };
   });
+}
 
-  function winner<T>(
-    arr: PlayerData[],
-    filter: (p: PlayerData) => boolean,
-    sort: (a: PlayerData, b: PlayerData) => number,
-    toWinner: (p: PlayerData) => ShameWinner,
-  ): ShameWinner {
-    const eligible = arr.filter(filter).sort(sort);
-    return eligible.length > 0 ? toWinner(eligible[0]) : null;
-  }
+// ─── Tied-winner helper ───────────────────────────────────────────────────────
+// Returns all players that share the worst score (ties included).
 
+function shameWinner(
+  players: PlayerData[],
+  filter: (p: PlayerData) => boolean,
+  metric: (p: PlayerData) => number,
+  direction: "min" | "max",
+  format: (metric: number, first: PlayerData) => { value: string; detail?: string },
+): ShameWinner {
+  const eligible = players.filter(filter);
+  if (eligible.length === 0) return null;
+
+  const scored = eligible.map((p) => ({ p, score: metric(p) }));
+  const worst  = direction === "min"
+    ? Math.min(...scored.map((s) => s.score))
+    : Math.max(...scored.map((s) => s.score));
+
+  const tied = scored.filter((s) => s.score === worst).map((s) => s.p);
+  const { value, detail } = format(worst, tied[0]);
+  return { names: tied.map((p) => p.name), value, detail };
+}
+
+// ─── Compute all shame categories ────────────────────────────────────────────
+
+type ShameStats = {
+  feeCount:      ShameWinner;
+  cancelCount:   ShameWinner;
+  worstRoi:      ShameWinner;
+  worstWinRate:  ShameWinner;
+  biggestLoss:   ShameWinner;
+  mostDefensive: ShameWinner;
+  favouriteFail: ShameWinner;
+  biggestRisk:   ShameWinner;
+  loseStreak:    ShameWinner;
+};
+
+function computeShame(players: PlayerData[]): ShameStats {
+  const sw = shameWinner;
   return {
-    feeCount: winner(
+    feeCount: sw(
       players,
       (p) => p.feeCount > 0,
-      (a, b) => b.feeCount - a.feeCount,
-      (p) => ({
-        name: p.name,
-        value: `${p.feeCount} avgifter`,
-        detail: `−${p.feeTotal.toLocaleString("sv-SE")} coins totalt`,
-      }),
+      (p) => p.feeCount,
+      "max",
+      (v, p) => ({ value: `${v} avgifter`, detail: `−${p.feeTotal.toLocaleString("sv-SE")} coins totalt` }),
     ),
 
-    cancelCount: winner(
+    cancelCount: sw(
       players,
       (p) => p.cancelCount > 0,
-      (a, b) => b.cancelCount - a.cancelCount,
-      (p) => ({
-        name: p.name,
-        value: `${p.cancelCount} annulleringar`,
-      }),
+      (p) => p.cancelCount,
+      "max",
+      (v) => ({ value: `${v} annulleringar` }),
     ),
 
-    worstRoi: winner(
+    worstRoi: sw(
       players,
       (p) => p.roi !== null,
-      (a, b) => (a.roi ?? 0) - (b.roi ?? 0),
-      (p) => ({
-        name: p.name,
-        value: `${p.roi! >= 0 ? "+" : ""}${p.roi!.toFixed(0)}%`,
-      }),
+      (p) => p.roi!,
+      "min",
+      (v) => ({ value: `${v >= 0 ? "+" : ""}${v.toFixed(0)}%` }),
     ),
 
-    worstWinRate: winner(
+    worstWinRate: sw(
       players,
-      (p) => p.settled.length >= 3,
-      (a, b) => (a.winRate ?? 0) - (b.winRate ?? 0),
-      (p) => ({
-        name: p.name,
-        value: `${p.winRate!.toFixed(0)}% vunna`,
-        detail: `${p.won.length} vunna av ${p.settled.length} slip`,
+      (p) => p.winRate !== null && p.settledCount >= 3,
+      (p) => p.winRate!,
+      "min",
+      (v, p) => ({
+        value: `${v.toFixed(0)}% vunna`,
+        detail: `${p.wonCount} vunna av ${p.settledCount} slip`,
       }),
     ),
 
-    biggestLoss: winner(
+    biggestLoss: sw(
       players,
       (p) => p.biggestLostStake > 0,
-      (a, b) => b.biggestLostStake - a.biggestLostStake,
-      (p) => ({
-        name: p.name,
-        value: `−${p.biggestLostStake.toLocaleString("sv-SE")} coins`,
-      }),
+      (p) => p.biggestLostStake,
+      "max",
+      (v) => ({ value: `−${v.toLocaleString("sv-SE")} coins` }),
     ),
 
-    mostDefensive: winner(
+    mostDefensive: sw(
       players,
-      (p) => p.avgOdds !== null && p.settled.length >= 2,
-      (a, b) => (a.avgOdds ?? 999) - (b.avgOdds ?? 999),
-      (p) => ({
-        name: p.name,
-        value: `${p.avgOdds!.toFixed(2)}x snittodds`,
-        detail: `${p.settled.length} avgjorda slip`,
+      (p) => p.avgOdds !== null && p.settledCount >= 2,
+      (p) => p.avgOdds!,
+      "min",
+      (v, p) => ({
+        value: `${v.toFixed(2)}x snittodds`,
+        detail: `${p.settledCount} avgjorda slip`,
       }),
     ),
 
-    favouriteFail: winner(
+    favouriteFail: sw(
       players,
       (p) => p.lowestLostOdds < Infinity,
-      (a, b) => a.lowestLostOdds - b.lowestLostOdds,
-      (p) => ({
-        name: p.name,
-        value: `${p.lowestLostOdds.toFixed(2)}x`,
+      (p) => p.lowestLostOdds,
+      "min",
+      (v) => ({
+        value: `${v.toFixed(2)}x`,
         detail: "lägst odds på ett förlorat slip",
       }),
     ),
 
-    biggestRisk: winner(
+    biggestRisk: sw(
       players,
       (p) => p.highestLostOdds > 0,
-      (a, b) => b.highestLostOdds - a.highestLostOdds,
-      (p) => ({
-        name: p.name,
-        value: `${p.highestLostOdds.toFixed(2)}x`,
+      (p) => p.highestLostOdds,
+      "max",
+      (v) => ({
+        value: `${v.toFixed(2)}x`,
         detail: "högst odds på ett förlorat slip",
       }),
     ),
 
-    loseStreak: winner(
+    loseStreak: sw(
       players,
       (p) => p.loseStreak >= 2,
-      (a, b) => b.loseStreak - a.loseStreak,
-      (p) => ({
-        name: p.name,
-        value: `${p.loseStreak} i rad`,
-      }),
+      (p) => p.loseStreak,
+      "max",
+      (v) => ({ value: `${v} i rad` }),
     ),
   };
 }
@@ -278,14 +284,14 @@ export default async function SkamsPage() {
     .eq("league_id", member.league_id as string)
     .eq("is_active", true);
 
-  const members = (rawMembers ?? []) as unknown as MemberRow[];
+  const members  = (rawMembers ?? []) as unknown as MemberRow[];
   const memberIds = members.map((m) => m.id);
 
   const [slipsRes, feesRes] = await Promise.all([
     memberIds.length > 0
       ? admin
           .from("bet_slips")
-          .select("id, league_member_id, stake, combined_odds, final_odds, status, settled_at, placed_at")
+          .select("id, league_member_id, stake, combined_odds, final_odds, status, settled_at")
           .in("league_member_id", memberIds)
           .in("status", ["won", "lost", "cancelled"])
       : { data: [] },
@@ -298,32 +304,23 @@ export default async function SkamsPage() {
       : { data: [] },
   ]);
 
-  const slips = (slipsRes.data ?? []) as unknown as SlipRow[];
-  const fees  = (feesRes.data  ?? []) as unknown as FeeRow[];
+  const slips   = (slipsRes.data  ?? []) as unknown as SlipRow[];
+  const fees    = (feesRes.data   ?? []) as unknown as FeeRow[];
+  const players = buildPlayerData(members, slips, fees);
+  const stats   = computeShame(players);
 
-  const stats = computeShame(members, slips, fees);
-  const hasSettledSlips = slips.some((s) => s.status === "won" || s.status === "lost");
-
-  const categories: {
-    emoji: string;
-    title: string;
-    description: string;
-    winner: ShameWinner;
-    alwaysShow?: boolean;
-  }[] = [
+  const categories: { emoji: string; title: string; description: string; winner: ShameWinner }[] = [
     {
       emoji: "🥱",
       title: "Flest avgifter",
       description: "Glömde betta flest gånger",
       winner: stats.feeCount,
-      alwaysShow: true,
     },
     {
       emoji: "🔁",
       title: "Ångerbuk",
       description: "Flest annullerade slip",
       winner: stats.cancelCount,
-      alwaysShow: true,
     },
     {
       emoji: "📉",
@@ -352,7 +349,7 @@ export default async function SkamsPage() {
     {
       emoji: "🤦",
       title: "Förlorade på favorit",
-      description: "Lägst odds på ett förlorat slip — borde gå hem",
+      description: "Lägst odds på ett förlorat slip",
       winner: stats.favouriteFail,
     },
     {
@@ -369,16 +366,11 @@ export default async function SkamsPage() {
     },
   ];
 
-  const visibleCategories = categories.filter(
-    (c) => c.alwaysShow || hasSettledSlips,
-  );
-
   return (
     <>
       <TopBar title="Skäms-lista" />
-      <div className="mx-auto max-w-lg px-4 py-5 space-y-4">
+      <div className="mx-auto max-w-lg space-y-4 px-4 py-5">
 
-        {/* Header */}
         <div className="flex items-center justify-between">
           <Link href="/stallning" className="text-sm font-semibold text-[var(--primary)]">
             ← Ställning
@@ -390,20 +382,11 @@ export default async function SkamsPage() {
           style={{ background: "linear-gradient(135deg, #450a0a 0%, #7f1d1d 50%, #991b1b 100%)" }}
         >
           <p className="text-2xl font-bold">💀 Skäms-lista</p>
-          <p className="mt-1 text-sm text-red-200">
-            Vem är turneringens största skam?
-          </p>
+          <p className="mt-1 text-sm text-red-200">Vem är turneringens största skam?</p>
         </div>
 
-        {!hasSettledSlips && (
-          <p className="rounded-xl border border-dashed border-gray-200 bg-white px-4 py-3 text-center text-xs text-gray-400">
-            De flesta kategorier fylls i när matchresultat börjar avgöras.
-          </p>
-        )}
-
-        {/* Cards */}
         <div className="space-y-2">
-          {visibleCategories.map((cat) => (
+          {categories.map((cat) => (
             <ShameCard key={cat.title} {...cat} />
           ))}
         </div>
@@ -411,6 +394,7 @@ export default async function SkamsPage() {
         <p className="pb-2 text-center text-[11px] text-gray-300">
           Statistik baseras på avgjorda matchslip.
         </p>
+
       </div>
     </>
   );
@@ -441,8 +425,12 @@ function ShameCard({
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         {winner ? (
           <>
-            <p className="text-sm font-semibold text-gray-900">{winner.name}</p>
-            <div className="text-right">
+            <div className="min-w-0">
+              {winner.names.map((name) => (
+                <p key={name} className="truncate text-sm font-semibold text-gray-900">{name}</p>
+              ))}
+            </div>
+            <div className="shrink-0 text-right">
               <p className="tabular-nums text-sm font-bold text-[var(--loss)]">{winner.value}</p>
               {winner.detail && (
                 <p className="text-[11px] text-gray-400">{winner.detail}</p>
