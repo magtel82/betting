@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { toggleLeague, updateTournamentStatus } from "../actions";
+import { toggleLeague, updateTournamentStatus, updateSpecialBetsDeadline } from "../actions";
 import type { League, Tournament, TournamentStatus } from "@/types";
 
 function SubmitButton({ label }: { label: string }) {
@@ -37,9 +37,24 @@ interface Props {
   tournament: Tournament;
 }
 
+// Convert UTC ISO string to "YYYY-MM-DDTHH:mm" in Stockholm time for datetime-local input
+function toStockholmLocal(utcIso: string | null): string {
+  if (!utcIso) return "";
+  const d = new Date(utcIso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Stockholm",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(d).map((p) => [p.type, p.value]));
+  return `${parts.year}-${pad(+parts.month)}-${pad(+parts.day)}T${pad(+parts.hour)}:${pad(+parts.minute)}`;
+}
+
 export function LeagueControls({ league, tournament }: Props) {
   const [leagueState, leagueAction] = useActionState(toggleLeague, null);
   const [tournamentState, tournamentAction] = useActionState(updateTournamentStatus, null);
+  const [deadlineState, deadlineAction] = useActionState(updateSpecialBetsDeadline, null);
 
   return (
     <section className="space-y-4">
@@ -84,6 +99,37 @@ export function LeagueControls({ league, tournament }: Props) {
           <SubmitButton label="Spara" />
         </form>
         <Feedback state={tournamentState} />
+      </div>
+
+      {/* Specialbet-deadline */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+        <div>
+          <p className="text-sm font-medium text-gray-900">Specialbet-deadline</p>
+          <p className="text-xs text-gray-500">
+            Andras bets avslöjas för alla spelare efter denna tidpunkt.
+          </p>
+        </div>
+        <form action={deadlineAction} className="flex items-center gap-3">
+          <input type="hidden" name="tournament_id" value={tournament.id} />
+          <input
+            type="datetime-local"
+            name="deadline"
+            defaultValue={toStockholmLocal(tournament.special_bets_deadline)}
+            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[var(--primary)] focus:outline-none"
+          />
+          <SubmitButton label="Spara" />
+        </form>
+        {tournament.special_bets_deadline && (
+          <p className="text-xs text-gray-400">
+            Nuvarande:{" "}
+            {new Date(tournament.special_bets_deadline).toLocaleString("sv-SE", {
+              timeZone: "Europe/Stockholm",
+              dateStyle: "short",
+              timeStyle: "short",
+            })}
+          </p>
+        )}
+        <Feedback state={deadlineState} />
       </div>
     </section>
   );

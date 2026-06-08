@@ -271,6 +271,34 @@ export async function updateTournamentStatus(
   return { success: `Turneringsstatus ändrad till "${labels[status]}"` };
 }
 
+// ─── Update special bets deadline ────────────────────────────────────────────
+
+export async function updateSpecialBetsDeadline(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const ctx = await getAdminContext();
+  if (!ctx) return { error: "Ingen behörighet" };
+
+  const tournamentId = formData.get("tournament_id") as string;
+  const raw = formData.get("deadline") as string;
+
+  // datetime-local gives "YYYY-MM-DDTHH:mm" (Stockholm time) — convert to UTC
+  const deadlineUtc = raw ? new Date(raw).toISOString() : null;
+
+  const { error } = await ctx.supabase
+    .from("tournaments")
+    .update({ special_bets_deadline: deadlineUtc })
+    .eq("id", tournamentId);
+
+  if (error) return { error: "Kunde inte uppdatera deadline" };
+
+  await writeAuditLog(ctx.supabase, ctx.user.id, "special_bets_deadline_change", "tournaments", tournamentId, { deadline: deadlineUtc });
+  revalidatePath("/admin");
+  revalidatePath("/specialbet");
+  return { success: deadlineUtc ? `Deadline satt till ${new Date(deadlineUtc).toLocaleString("sv-SE", { timeZone: "Europe/Stockholm" })}` : "Deadline borttagen" };
+}
+
 // ─── Set match odds (admin fallback) ─────────────────────────────────────────
 
 export async function setMatchOdds(
