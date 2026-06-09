@@ -143,9 +143,16 @@ export async function syncResults(): Promise<SyncResult> {
     }
 
     if (!internal) {
-      result.errors.push(
-        `No internal match for external id ${fd.id} (${fd.homeTeam.name} vs ${fd.awayTeam.name} at ${fd.utcDate})`
-      );
+      // TBD knockout fixtures (teams not yet determined) come back with null
+      // names from football-data. Skip them silently — they are expected to be
+      // unmatchable until the bracket fills in, and logging 32 of them daily
+      // would falsely flag the sync as failing.
+      const isTbd = !fd.homeTeam.name && !fd.awayTeam.name;
+      if (!isTbd) {
+        result.errors.push(
+          `No internal match for external id ${fd.id} (${fd.homeTeam.name} vs ${fd.awayTeam.name} at ${fd.utcDate})`
+        );
+      }
       result.skipped++;
       continue;
     }
