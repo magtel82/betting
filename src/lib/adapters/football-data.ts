@@ -78,13 +78,30 @@ export async function fetchMatchesForTournament(
 
   const url = `${BASE_URL}/competitions/${competitionId}/matches`;
 
-  const res = await fetch(url, {
-    next: { revalidate: 0 },
-    headers: {
-      "X-Auth-Token": apiKey,
-      "Accept":       "application/json",
-    },
-  });
+  // Serverless cold starts intermittently throw "fetch failed" (DNS/TLS hiccup)
+  // on the first request. The results cron runs only once daily, so a single
+  // transient failure would delay settlement 24h. Retry up to 3 times.
+  let res: Response | undefined;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      res = await fetch(url, {
+        next: { revalidate: 0 },
+        headers: {
+          "X-Auth-Token": apiKey,
+          "Accept":       "application/json",
+        },
+      });
+      break;
+    } catch (err) {
+      lastErr = err;
+      if (attempt < 3) await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+  }
+
+  if (!res) {
+    throw new FootballDataError(0, `fetch failed after 3 attempts: ${String(lastErr)}`);
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
