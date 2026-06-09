@@ -27,6 +27,7 @@ export const TEAM_NAME_TO_SHORT: Record<string, string> = {
   // ── Grupp B ──────────────────────────────────────────────────────────────
   "Bosnia & Herzegovina":     "BIH",
   "Bosnia and Herzegovina":   "BIH",
+  "Bosnia-Herzegovina":       "BIH",  // football-data.org-stavning
   "Canada":                   "CAN",
   "Qatar":                    "QAT",
   "Switzerland":              "SUI",
@@ -70,6 +71,7 @@ export const TEAM_NAME_TO_SHORT: Record<string, string> = {
 
   // ── Grupp H ──────────────────────────────────────────────────────────────
   "Cape Verde":               "CPV",
+  "Cape Verde Islands":       "CPV",  // football-data.org-stavning
   "Spain":                    "ESP",
   "Saudi Arabia":             "KSA",
   "Uruguay":                  "URU",

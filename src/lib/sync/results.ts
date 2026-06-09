@@ -85,6 +85,19 @@ export async function syncResults(): Promise<SyncResult> {
     if (m.external_id) byExternalId.set(m.external_id, m);
   }
 
+  // Valid short_names in the DB — used as a robust fallback when football-data's
+  // team name spelling differs from the map. Their `tla` field is the FIFA code,
+  // which equals our short_name, so any team resolves even with unmapped names.
+  const validShortNames = new Set<string>();
+  for (const m of internalMatches) {
+    if (m.home_short) validShortNames.add(m.home_short);
+    if (m.away_short) validShortNames.add(m.away_short);
+  }
+  const resolveShort = (name: string | null, tla: string | null): string | null =>
+    resolveTeamShortName(name) ??
+    resolveTeamShortName(tla) ??
+    (tla && validShortNames.has(tla.toUpperCase()) ? tla.toUpperCase() : null);
+
   // 2. Fetch from football-data.org
   let fdMatches: FDMatch[];
   try {
@@ -106,10 +119,8 @@ export async function syncResults(): Promise<SyncResult> {
 
     // ── Pass 2: match by team names + date window ──────────────────────────
     if (!internal) {
-      const homeShort = resolveTeamShortName(fd.homeTeam.name) ??
-                        resolveTeamShortName(fd.homeTeam.tla);
-      const awayShort = resolveTeamShortName(fd.awayTeam.name) ??
-                        resolveTeamShortName(fd.awayTeam.tla);
+      const homeShort = resolveShort(fd.homeTeam.name, fd.homeTeam.tla);
+      const awayShort = resolveShort(fd.awayTeam.name, fd.awayTeam.tla);
 
       if (homeShort && awayShort) {
         internal = internalMatches.find(
