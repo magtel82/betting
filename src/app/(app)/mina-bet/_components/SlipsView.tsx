@@ -160,22 +160,19 @@ export function SlipsView({ slips, currentUserId, newSlipId }: Props) {
           })}
         </div>
 
-        {/* Player filter chips — only in "Alla" tab with multiple players */}
+        {/* Player filter dropdown — only in "Alla" tab with multiple players */}
         {showPlayerFilter && (
-          <div className="mx-auto max-w-lg px-4 pb-2.5 flex gap-1.5 overflow-x-auto">
-            <PlayerChip
-              label="Alla spelare"
-              active={playerFilter === "all"}
-              onClick={() => setPlayerFilter("all")}
-            />
-            {uniquePlayers.map((name) => (
-              <PlayerChip
-                key={name}
-                label={name}
-                active={playerFilter === name}
-                onClick={() => setPlayerFilter(name)}
-              />
-            ))}
+          <div className="mx-auto max-w-lg px-4 pb-2.5">
+            <select
+              value={playerFilter}
+              onChange={(e) => setPlayerFilter(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
+            >
+              <option value="all">Alla spelare</option>
+              {uniquePlayers.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
           </div>
         )}
       </div>
@@ -254,29 +251,6 @@ function TabButton({
   );
 }
 
-function PlayerChip({
-  label,
-  active,
-  onClick,
-}: {
-  label:   string;
-  active:  boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-        active
-          ? "border-[var(--primary)] bg-[var(--primary-50)] text-[var(--primary)]"
-          : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
 
 function EmptyState({ tab, hasActiveFilter }: { tab: Tab; hasActiveFilter: boolean }) {
   if (hasActiveFilter) {
