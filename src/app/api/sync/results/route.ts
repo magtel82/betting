@@ -14,6 +14,7 @@
 import { syncResults } from "@/lib/sync/results";
 import { writeSyncLog } from "@/lib/sync/log";
 import { applyInactivityFee } from "@/lib/betting/inactivity-fee";
+import { lockStartedSlips } from "@/lib/betting/lock-slips";
 
 const LEAGUE_ID = "b1000000-0000-0000-0000-000000000001";
 
@@ -43,6 +44,10 @@ async function handleSync(request: Request): Promise<Response> {
       console.error("[sync/results] Errors:\n" + result.errors.join("\n"));
     }
     await writeSyncLog("results", result, durationMs);
+
+    // Lock slips for matches that have already started.
+    const lockResult = await lockStartedSlips();
+    console.log("[sync/results] Lock slips:", JSON.stringify(lockResult));
 
     // Apply inactivity fee for yesterday (Stockholm time).
     // Cron runs at 06:00 UTC = 08:00 Stockholm — all previous day's matches are done.

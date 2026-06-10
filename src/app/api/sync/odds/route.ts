@@ -16,6 +16,7 @@
 
 import { syncOdds } from "@/lib/sync/odds";
 import { writeSyncLog } from "@/lib/sync/log";
+import { lockStartedSlips } from "@/lib/betting/lock-slips";
 import { fetchAvailableSports, SPORT_KEY, OddsApiError } from "@/lib/adapters/odds-api";
 import { inspectAdminKey } from "@/lib/supabase/admin";
 
@@ -150,6 +151,9 @@ async function handleSync(request: Request): Promise<Response> {
 
   const startedAt = Date.now();
   try {
+    const lockResult = await lockStartedSlips();
+    console.log("[sync/odds] Lock slips:", JSON.stringify(lockResult));
+
     const result = await syncOdds();
     const durationMs = Date.now() - startedAt;
     console.log(
