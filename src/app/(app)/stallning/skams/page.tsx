@@ -20,6 +20,12 @@ type FeeRow = { league_member_id: string; amount: number };
 
 type Stat = { names: string[]; value: string; detail?: string } | null;
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function toStockholmDate(utc: string) {
+  return new Date(utc).toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm" });
+}
+
 // ─── Name helper ──────────────────────────────────────────────────────────────
 
 function memberName(profile: ProfileRow | ProfileRow[] | null): string {
@@ -278,16 +284,26 @@ export default async function SkamsPage() {
     );
   }
 
-  const { data: rawMembers } = await supabase
-    .from("league_members")
-    .select("id, user_id, profile:profiles(display_name, email)")
-    .eq("league_id", member.league_id as string)
-    .eq("is_active", true);
+  const [rawMembersRes, leagueRes] = await Promise.all([
+    supabase
+      .from("league_members")
+      .select("id, user_id, profile:profiles(display_name, email)")
+      .eq("league_id", member.league_id as string)
+      .eq("is_active", true),
+    supabase
+      .from("leagues")
+      .select("tournament_id")
+      .eq("id", member.league_id as string)
+      .single(),
+  ]);
 
-  const members   = (rawMembers ?? []) as unknown as MemberRow[];
-  const memberIds = members.map((m) => m.id);
+  const members     = (rawMembersRes.data ?? []) as unknown as MemberRow[];
+  const memberIds   = members.map((m) => m.id);
+  const tournamentId = leagueRes.data?.tournament_id as string | undefined;
 
-  const [slipsRes, feesRes] = await Promise.all([
+  const now = new Date().toISOString();
+
+  const [slipsRes, feesRes, pastMatchesRes, activeSlipsRes] = await Promise.all([
     memberIds.length > 0
       ? admin.from("bet_slips")
           .select("id, league_member_id, stake, combined_odds, final_odds, status, settled_at")
@@ -300,7 +316,59 @@ export default async function SkamsPage() {
           .in("league_member_id", memberIds)
           .eq("type", "inactivity_fee")
       : { data: [] },
+    tournamentId
+      ? admin.from("matches")
+          .select("id, scheduled_at")
+          .eq("tournament_id", tournamentId)
+          .neq("status", "void")
+          .lt("scheduled_at", now)
+      : { data: [] },
+    memberIds.length > 0
+      ? admin.from("bet_slips")
+          .select("id, league_member_id")
+          .in("league_member_id", memberIds)
+          .neq("status", "cancelled")
+      : { data: [] },
   ]);
+
+  // Selections for non-cancelled slips → derive covered dates per member
+  const activeSlipIds = (activeSlipsRes.data ?? []).map((s) => (s as { id: string }).id);
+  const { data: selectionsData } = activeSlipIds.length > 0
+    ? await admin.from("bet_slip_selections").select("slip_id, match_id").in("slip_id", activeSlipIds)
+    : { data: [] };
+
+  // Build missed-days per member
+  const matchIdToDate = new Map<string, string>();
+  const pastMatchDays = new Set<string>();
+  for (const m of pastMatchesRes.data ?? []) {
+    const d = toStockholmDate((m as { scheduled_at: string }).scheduled_at);
+    matchIdToDate.set((m as { id: string }).id, d);
+    pastMatchDays.add(d);
+  }
+
+  const slipToMember = new Map<string, string>();
+  for (const s of activeSlipsRes.data ?? []) {
+    slipToMember.set((s as { id: string; league_member_id: string }).id, (s as { id: string; league_member_id: string }).league_member_id);
+  }
+
+  const coveredByMember = new Map<string, Set<string>>();
+  for (const m of members) coveredByMember.set(m.id, new Set());
+  for (const sel of selectionsData ?? []) {
+    const s = sel as { slip_id: string; match_id: string };
+    const mid = slipToMember.get(s.slip_id);
+    const date = matchIdToDate.get(s.match_id);
+    if (mid && date) coveredByMember.get(mid)?.add(date);
+  }
+
+  type MissedEntry = { name: string; missed: number };
+  const missedEntries: MissedEntry[] = members
+    .map((m) => ({
+      name:   memberName(m.profile),
+      missed: [...pastMatchDays].filter((d) => !coveredByMember.get(m.id)?.has(d)).length,
+    }))
+    .sort((a, b) => b.missed - a.missed);
+
+  const totalPastDays = pastMatchDays.size;
 
   const players = buildPlayerData(
     members,
@@ -356,6 +424,48 @@ export default async function SkamsPage() {
             ))}
           </div>
         </section>
+
+        {/* ── Missade matchdagar ────────────────────────────────────────────── */}
+        {totalPastDays > 0 && (
+          <section>
+            <div
+              className="mb-3 flex items-center gap-2 rounded-xl px-4 py-3 text-white"
+              style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 60%, #4338ca 100%)" }}
+            >
+              <span className="text-xl" aria-hidden>📅</span>
+              <div>
+                <p className="font-bold">Missade matchdagar</p>
+                <p className="text-xs text-indigo-200">Dagar med match utan aktivt bet</p>
+              </div>
+            </div>
+
+            {missedEntries.every((e) => e.missed === 0) ? (
+              <div className="rounded-xl border border-gray-100 bg-white px-4 py-4 text-center shadow-sm">
+                <p className="text-2xl">🎉</p>
+                <p className="mt-1 text-sm font-semibold text-gray-800">Alla rena!</p>
+                <p className="mt-0.5 text-xs text-gray-400">Ingen har missat en enda matchdag</p>
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+                {missedEntries.map((entry, i) => (
+                  <div
+                    key={entry.name}
+                    className={`flex items-center justify-between gap-3 px-4 py-3 ${
+                      i < missedEntries.length - 1 ? "border-b border-gray-50" : ""
+                    }`}
+                  >
+                    <span className="text-sm font-medium text-gray-800">{entry.name}</span>
+                    <span className={`tabular-nums text-sm font-bold ${
+                      entry.missed === 0 ? "text-[var(--win)]" : "text-[var(--loss)]"
+                    }`}>
+                      {entry.missed === 0 ? "0 ✓" : `${entry.missed} av ${totalPastDays}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         <p className="pb-2 text-center text-[11px] text-gray-300">
           Statistik baseras på avgjorda matchslip.
