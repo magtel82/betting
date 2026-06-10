@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { BottomNav } from "@/components/nav/BottomNav";
 import { UserMenu } from "@/components/nav/UserMenu";
+import { WelcomeModal } from "@/components/WelcomeModal";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -43,6 +44,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </div>
 
+      <WelcomeModal />
       <main className="flex-1 pb-20">{children}</main>
       <BottomNav />
     </div>
