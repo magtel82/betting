@@ -193,7 +193,7 @@ export default async function DashboardPage() {
                  strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden>
               <path d="M12 5v14M5 12h14"/>
             </svg>
-            Lägg ett nytt slip
+            Lägg ett nytt bet
           </Link>
           <Link
             href="/stallning/kalender"
