@@ -136,6 +136,13 @@ export default async function KalenderPage() {
           </div>
         )}
 
+        {/* ── Legend ────────────────────────────────────────────────────────── */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
+          <LegendItem color="bg-[var(--win)]"  label="Bet lagd" />
+          <LegendItem color="bg-[var(--loss)]" label="Ingen bet" />
+          <LegendItem color="bg-[var(--primary-50)] ring-1 ring-[var(--primary)]" label="Kommande utan bet" />
+        </div>
+
         {/* ── Calendars ─────────────────────────────────────────────────────── */}
         {/* VM 2026: June 11 – July 19 → show June + July */}
         {[{ year: 2026, month: 5 }, { year: 2026, month: 6 }].map(({ year, month }) => (
@@ -148,13 +155,6 @@ export default async function KalenderPage() {
             today={today}
           />
         ))}
-
-        {/* ── Legend ────────────────────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-gray-100 bg-white px-4 py-3 shadow-sm">
-          <LegendItem color="bg-[var(--win)]"   label="Bet lagd" />
-          <LegendItem color="bg-[var(--loss)]"  label="Ingen bet" />
-          <LegendItem color="bg-[var(--primary-50)] ring-1 ring-[var(--primary)]" label="Kommande" />
-        </div>
 
       </div>
     </>
@@ -206,14 +206,15 @@ function MonthCalendar({
             let text = "text-gray-300";
 
             if (isMatch) {
-              if (isPast) {
-                bg   = covered ? "bg-[var(--win)]" : "bg-[var(--loss)]";
+              if (covered) {
+                bg   = "bg-[var(--win)]";
+                text = "text-white font-bold";
+              } else if (isPast) {
+                bg   = "bg-[var(--loss)]";
                 text = "text-white font-bold";
               } else {
                 bg   = "bg-[var(--primary-50)] ring-1 ring-[var(--primary)]";
-                text = isToday
-                  ? "text-[var(--primary)] font-black"
-                  : "text-[var(--primary)] font-bold";
+                text = isToday ? "text-[var(--primary)] font-black" : "text-[var(--primary)] font-bold";
               }
             }
 
@@ -225,7 +226,7 @@ function MonthCalendar({
                 <span className={`text-sm leading-none ${text}`}>{day}</span>
                 {isMatch && count > 1 && (
                   <span className={`mt-0.5 text-[9px] leading-none ${
-                    isPast ? "text-white/75" : "text-[var(--primary)]/70"
+                    covered || isPast ? "text-white/75" : "text-[var(--primary)]/70"
                   }`}>
                     {count}
                   </span>
