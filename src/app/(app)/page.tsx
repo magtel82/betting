@@ -24,7 +24,7 @@ type NextMatch = {
 
 type ActiveSlip = {
   id: string;
-  status: "open" | "locked";
+  status: "open" | "locked" | "won" | "lost" | "void";
   stake: number;
   potential_payout: number;
   selections: Array<{
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
       .from("bet_slips")
       .select("id, status, stake, potential_payout, selections:bet_slip_selections(match:matches(scheduled_at, home_team:teams!matches_home_team_id_fkey(short_name), away_team:teams!matches_away_team_id_fkey(short_name)))")
       .eq("league_member_id", member.id as string)
-      .in("status", ["open", "locked"])
+      .neq("status", "cancelled")
       .order("placed_at", { ascending: false }),
     supabase
       .from("matches")
@@ -113,12 +113,13 @@ export default async function DashboardPage() {
       : Promise.resolve({ data: [] }),
   ]);
 
-  const openSlips   = (slipsRes.data ?? []) as unknown as ActiveSlip[];
+  const allMySlips  = (slipsRes.data ?? []) as unknown as ActiveSlip[];
+  const openSlips   = allMySlips.filter((s) => s.status === "open" || s.status === "locked");
   const rawMatches  = (matchesRes.data ?? []) as unknown as NextMatch[];
   const nextMatches = [...new Map(rawMatches.map((m) => [m.id, m])).values()].slice(0, 3);
 
   const isTodayMatchday = (todayMatchesRes.data?.length ?? 0) > 0;
-  const hasBetToday = isTodayMatchday && openSlips.some((slip) =>
+  const hasBetToday = isTodayMatchday && allMySlips.some((slip) =>
     (slip.selections ?? []).some((sel) => {
       const match = Array.isArray(sel.match) ? sel.match[0] : sel.match;
       if (!match?.scheduled_at) return false;
