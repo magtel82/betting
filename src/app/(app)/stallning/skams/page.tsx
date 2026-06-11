@@ -301,7 +301,8 @@ export default async function SkamsPage() {
   const memberIds   = members.map((m) => m.id);
   const tournamentId = leagueRes.data?.tournament_id as string | undefined;
 
-  const now = new Date().toISOString();
+  const now           = new Date().toISOString();
+  const todayStockholm = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Stockholm" });
 
   const [slipsRes, feesRes, pastMatchesRes, activeSlipsRes] = await Promise.all([
     memberIds.length > 0
@@ -337,13 +338,16 @@ export default async function SkamsPage() {
     ? await admin.from("bet_slip_selections").select("slip_id, match_id").in("slip_id", activeSlipIds)
     : { data: [] };
 
-  // Build missed-days per member
+  // Build missed-days per member.
+  // Only count days BEFORE today — same rule as the calendar summary.
+  // A day is only "missed" once it's fully in the past; today might still have
+  // matches going on and bets settling.
   const matchIdToDate = new Map<string, string>();
   const pastMatchDays = new Set<string>();
   for (const m of pastMatchesRes.data ?? []) {
     const d = toStockholmDate((m as { scheduled_at: string }).scheduled_at);
     matchIdToDate.set((m as { id: string }).id, d);
-    pastMatchDays.add(d);
+    if (d < todayStockholm) pastMatchDays.add(d);
   }
 
   const slipToMember = new Map<string, string>();
