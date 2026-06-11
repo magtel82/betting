@@ -49,6 +49,8 @@ create table teams (
   name          text        not null,
   short_name    char(3)     not null,
   flag_emoji    text,
+  -- ISO 3166-1 alpha-2 code for flag-icons CSS sprites (gb-eng / gb-sct for subdivisions)
+  flag_code     text,
   group_letter  char(1),
   created_at    timestamptz not null default now()
 );

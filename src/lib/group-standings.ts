@@ -27,7 +27,7 @@ export interface TeamStanding {
   points:    number;
 }
 
-type PartialTeam  = Pick<Team,  "id" | "name" | "short_name" | "flag_emoji" | "group_letter">;
+type PartialTeam  = Pick<Team,  "id" | "name" | "short_name" | "flag_code" | "group_letter">;
 type PartialMatch = Pick<Match, "id" | "status" | "home_team_id" | "away_team_id" | "home_score" | "away_score">;
 
 export function computeGroupStandings(
@@ -42,7 +42,7 @@ export function computeGroupStandings(
       teamId:    t.id,
       name:      t.name,
       shortName: t.short_name,
-      flag:      t.flag_emoji,
+      flag:      t.flag_code,
       played:    0,
       won:       0,
       drawn:     0,

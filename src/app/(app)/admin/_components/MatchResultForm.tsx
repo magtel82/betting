@@ -32,8 +32,8 @@ const STATUS_OPTIONS: { value: MatchStatus; label: string }[] = [
 ];
 
 function matchLabel(m: MatchWithTeams): string {
-  const home = m.home_team ? `${m.home_team.flag_emoji ?? ""} ${m.home_team.short_name}` : "?";
-  const away = m.away_team ? `${m.away_team.flag_emoji ?? ""} ${m.away_team.short_name}` : "?";
+  const home = m.home_team ? m.home_team.short_name : "?";
+  const away = m.away_team ? m.away_team.short_name : "?";
   const date = new Date(m.scheduled_at).toLocaleDateString("sv-SE", {
     month: "short",
     day: "numeric",

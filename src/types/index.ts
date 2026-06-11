@@ -52,6 +52,7 @@ export interface Team {
   name:          string;
   short_name:    string;
   flag_emoji:    string | null;
+  flag_code:     string | null;
   group_letter:  string | null;
   created_at:    string;
 }

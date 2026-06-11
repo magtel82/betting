@@ -58,7 +58,7 @@ interface RawTeam {
   id: string;
   name: string;
   short_name: string;
-  flag_emoji: string | null;
+  flag_code: string | null;
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -197,7 +197,7 @@ function topThird(groups: Record<string, TeamStanding[]>, zeroIdx: number): Brac
 }
 
 function toTeam(t: RawTeam): BracketTeam {
-  return { id: t.id, name: t.name, shortName: t.short_name, flag: t.flag_emoji ?? null };
+  return { id: t.id, name: t.name, shortName: t.short_name, flag: t.flag_code ?? null };
 }
 
 function slotLabel(slot: string | null): string {
