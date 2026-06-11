@@ -21,8 +21,8 @@ function swDate(utc: string) {
 }
 
 function matchLabel(m: MatchWithTeams): string {
-  const home = m.home_team ? `${m.home_team.flag_emoji ?? ""} ${m.home_team.short_name}` : "?";
-  const away = m.away_team ? `${m.away_team.flag_emoji ?? ""} ${m.away_team.short_name}` : "?";
+  const home = m.home_team ? m.home_team.short_name : "?";
+  const away = m.away_team ? m.away_team.short_name : "?";
   const score =
     m.home_score !== null && m.away_score !== null
       ? ` ${m.home_score}–${m.away_score}`

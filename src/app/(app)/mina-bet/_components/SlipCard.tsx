@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo } from "react";
 import Link from "next/link";
 import { deleteSlipAction } from "../actions";
 import type { SlipStatus, BetStatus, BetOutcome } from "@/types";
-import { FlagIcon } from "@/components/FlagIcon";
+import { Flag } from "@/components/Flag";
 
 export interface SelectionRow {
   id:            string;
@@ -17,8 +17,8 @@ export interface SelectionRow {
     stage:        string;
     group_letter: string | null;
     scheduled_at: string;
-    home_team:    { short_name: string; flag_emoji: string | null } | null;
-    away_team:    { short_name: string; flag_emoji: string | null } | null;
+    home_team:    { short_name: string; flag_code: string | null } | null;
+    away_team:    { short_name: string; flag_code: string | null } | null;
   } | null;
 }
 
@@ -193,9 +193,9 @@ export function SlipCard({ slip, showPlayer, isOwn, isNew = false }: Props) {
                 ) : (
                   <>
                     <p className="truncate text-sm font-semibold text-gray-900">
-                      <FlagIcon code={home?.short_name ?? ""} className="text-base" /> {home?.short_name ?? "?"}
+                      <Flag code={home?.flag_code} className="text-base" /> {home?.short_name ?? "?"}
                       <span className="mx-1 text-gray-300">–</span>
-                      <FlagIcon code={away?.short_name ?? ""} className="text-base" /> {away?.short_name ?? "?"}
+                      <Flag code={away?.flag_code} className="text-base" /> {away?.short_name ?? "?"}
                     </p>
                     {label && (
                       <p className="mt-0.5 text-[11px] uppercase tracking-wide text-gray-400">{label}</p>

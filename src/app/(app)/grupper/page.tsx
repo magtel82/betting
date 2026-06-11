@@ -11,7 +11,7 @@ export default async function GrupperPage() {
   const [teamsRes, groupMatchesRes, knockoutMatchesRes] = await Promise.all([
     supabase
       .from("teams")
-      .select("id, name, short_name, flag_emoji, group_letter")
+      .select("id, name, short_name, flag_code, group_letter")
       .order("group_letter")
       .order("name"),
 
@@ -27,7 +27,7 @@ export default async function GrupperPage() {
       .order("match_number"),
   ]);
 
-  type TeamRow        = Pick<Team, "id" | "name" | "short_name" | "flag_emoji" | "group_letter">;
+  type TeamRow        = Pick<Team, "id" | "name" | "short_name" | "flag_code" | "group_letter">;
   type GroupMatchRow  = Pick<Match, "id" | "status" | "home_team_id" | "away_team_id" | "home_score" | "away_score"> & { group_letter: string | null };
 
   const teams         = (teamsRes.data          ?? []) as TeamRow[];
