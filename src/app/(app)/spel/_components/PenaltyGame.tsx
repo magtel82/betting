@@ -24,22 +24,23 @@ const REACH_Y = 8;
 const LIVES_START = 3;
 
 // ── Splash texts ──
-const GOAL_CHEERS = ["MÅÅÅL! ⚽", "I KRYSSET! 🎯", "DÄR SATT DEN! 🔥", "OemotsTÅNDLIGT! 💥", "ÅSKNYGEL! ⚡"];
+const PERFECT_GOAL = "Mucho Betis! 💚";   // top-corner screamer
+const GOAL_CHEERS = ["MÅÅÅL! ⚽", "I KRYSSET! 🎯", "DÄR SATT DEN! 🔥", "OEMOTSTÅNDLIGT! 💥"];
 const SAVE_TAUNTS = [
   "Pinsamt. 🤡",
   "Min mormor räddar bättre",
   "Var det ALLT? 🥱",
   "Hahaha, nej. 🧤",
-  "Soptipp! 🗑️",
-  "Lägg ner, brorsan 💀",
-  "Käka boll! 🧤",
-  "Trams. 🙄",
+  "Värdelöst. 🗑️",
+  "Patetiskt. 💀",
+  "Du suger, erkänn det 👎",
+  "Genant. Lägg av. 😤",
   "Skäms. 😴",
   "Den tog jag i sömnen 😪",
-  "Nää du. 👎",
+  "Talanglöst. 🤮",
   "Kioskvältare? Knappast.",
   "Snälla, sluta. 😬",
-  "Var det med FLIT? 🤔",
+  "Ynkligt försök. 😒",
 ];
 const OVER_TAUNTS = [
   "ÖVER RIBBAN! 🚀",
@@ -177,7 +178,10 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
     const dy = (ballY - gy) / REACH_Y;
     const result: ShotResult = over ? "over" : (dx * dx + dy * dy <= 1 ? "save" : "goal");
 
-    return { result, ballX, ballY, gx, gy };
+    // Perfect = a goal tucked into a top corner (tight to a post, high power).
+    const perfect = result === "goal" && power >= 0.72 && (aimX <= 0.16 || aimX >= 0.84);
+
+    return { result, perfect, ballX, ballY, gx, gy };
   }, []);
 
   // ── Main tap handler ──
@@ -223,7 +227,7 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
       window.setTimeout(() => {
         const isGoal = shot.result === "goal";
         setResultText(
-          isGoal                    ? { text: pick(GOAL_CHEERS), kind: "goal" } :
+          isGoal                    ? { text: shot.perfect ? PERFECT_GOAL : pick(GOAL_CHEERS), kind: "goal" } :
           shot.result === "save"    ? { text: pick(SAVE_TAUNTS), kind: "save" } :
                                       { text: pick(OVER_TAUNTS), kind: "over" }
         );
