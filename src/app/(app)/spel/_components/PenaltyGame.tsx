@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { submitPenaltyScoreAction } from "../actions";
-import type { LeaderRow } from "../page";
 
 // ─── Geometry (all values are % of the square-ish stage) ───────────────────────
 // Goal-mouth proportions follow a real goal (~2.6 : 1 wide-to-tall in this view).
@@ -69,7 +68,7 @@ function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow[]; hasPlayed: boolean }) {
+export function PenaltyGame() {
   const router = useRouter();
 
   const [phase, setPhase]   = useState<Phase>("idle");
@@ -453,37 +452,6 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
           {phase === "aim" ? "Tryck för att låsa riktning" : phase === "power" ? "Tryck för att skjuta" : "…"}
         </p>
       )}
-
-      {/* ── Leaderboard ───────────────────────────────────────────────────────── */}
-      <section className="pt-2">
-        <h2 className="mb-2 flex items-center gap-2 font-mono text-xs font-black uppercase tracking-widest text-gray-500">
-          🏆 Topplista
-        </h2>
-        {leaderboard.length === 0 ? (
-          <div className="rounded-xl border-2 border-dashed border-gray-300 bg-white py-6 text-center">
-            <p className="text-sm font-medium text-gray-600">Ingen har spelat ännu</p>
-            <p className="mt-0.5 text-xs text-gray-400">Bli först att sätta ett rekord!</p>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-xl border-2 border-gray-900 bg-white shadow-[3px_3px_0_0_#111827]">
-            {leaderboard.map((row, i) => (
-              <div key={row.memberId}
-                   className={`flex items-center gap-3 px-4 py-2.5 ${i < leaderboard.length - 1 ? "border-b border-gray-100" : ""} ${row.isMe ? "bg-[var(--primary-50)]" : ""}`}>
-                <span className="w-6 text-center font-mono text-sm font-black text-gray-400">
-                  {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : i + 1}
-                </span>
-                <span className={`flex-1 truncate text-sm ${row.isMe ? "font-bold text-[var(--primary-600)]" : "font-medium text-gray-900"}`}>
-                  {row.name}{row.isMe && <span className="ml-1.5 text-[10px] font-bold uppercase text-[var(--primary)]">du</span>}
-                </span>
-                <span className="font-mono text-base font-black tabular-nums text-gray-900">{row.best}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {!hasPlayed && leaderboard.length > 0 && (
-          <p className="mt-2 text-center text-[11px] text-gray-400">Du står inte på listan ännu — kör en match!</p>
-        )}
-      </section>
     </div>
   );
 }
