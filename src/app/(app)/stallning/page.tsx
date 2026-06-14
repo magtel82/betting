@@ -30,12 +30,18 @@ type LeaderboardEntry = {
   memberId: string;
   userId: string;
   name: string;
-  totalCoins: number;
+  totalCoins: number;   // net worth: free wallet + stakes locked in open bets
+  freeCoins: number;    // match_wallet + special_wallet (spendable now)
+  lockedCoins: number;  // stakes tied up in open/locked slips + active special bets
   bestOdds: number;
   wonCount: number;
 };
 
-function buildLeaderboard(members: MemberRow[], slips: SlipRow[]): LeaderboardEntry[] {
+function buildLeaderboard(
+  members: MemberRow[],
+  slips: SlipRow[],
+  lockedByMember: Map<string, number>,
+): LeaderboardEntry[] {
   const wonByMember = new Map<string, SlipRow[]>();
   for (const m of members) wonByMember.set(m.id, []);
   for (const s of slips) {
@@ -51,11 +57,16 @@ function buildLeaderboard(members: MemberRow[], slips: SlipRow[]): LeaderboardEn
       ? emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)
       : undefined;
     const name = rawName && !rawName.includes("@") ? rawName : (emailName ?? "Okänd");
+    const freeCoins   = m.match_wallet + m.special_wallet;
+    const lockedCoins = lockedByMember.get(m.id) ?? 0;
     return {
       memberId: m.id,
       userId: m.user_id,
       name,
-      totalCoins: m.match_wallet + m.special_wallet,
+      // Rank by true net worth so coins tied up in open bets still count.
+      totalCoins: freeCoins + lockedCoins,
+      freeCoins,
+      lockedCoins,
       // Tie-breaker 1: highest final_odds on a single winning slip
       bestOdds: won.reduce((max, s) => Math.max(max, s.final_odds ?? s.combined_odds), 0),
       wonCount: won.length,
@@ -252,6 +263,19 @@ export default async function StallningPage() {
 
   const slips = (rawSlips ?? []) as unknown as SlipRow[];
 
+  // Stakes locked in open/locked match slips + active special bets, per member.
+  // These coins are still "owned" by the player — they count toward net worth.
+  // Via RPC because special_bets rows are owner-only under RLS (picks stay
+  // hidden); the function returns aggregate stake sums for the whole league.
+  const { data: lockedData } = await supabase.rpc("get_league_locked_stakes", {
+    p_league_id: member.league_id,
+  });
+
+  const lockedByMember = new Map<string, number>();
+  for (const r of (lockedData ?? []) as { league_member_id: string; locked_match: number; locked_special: number }[]) {
+    lockedByMember.set(r.league_member_id, (r.locked_match ?? 0) + (r.locked_special ?? 0));
+  }
+
   // My coins delta since yesterday — own transactions only (RLS limits to own rows)
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: myTxData } = member
@@ -263,7 +287,7 @@ export default async function StallningPage() {
     : { data: [] };
   const myDelta = (myTxData ?? []).reduce((sum, tx) => sum + (tx.amount as number), 0);
 
-  const leaderboard = buildLeaderboard(members, slips);
+  const leaderboard = buildLeaderboard(members, slips, lockedByMember);
   const stats = computeStats(members, slips);
   const hasStats = slips.length > 0;
 
@@ -321,6 +345,11 @@ export default async function StallningPage() {
                       {entry.totalCoins.toLocaleString("sv-SE")}{" "}
                       <span className="text-xs text-[var(--coin)]">🪙</span>
                     </span>
+                    {entry.lockedCoins > 0 && (
+                      <span className="tabular-nums text-[11px] text-gray-400">
+                        {entry.freeCoins.toLocaleString("sv-SE")} fritt · {entry.lockedCoins.toLocaleString("sv-SE")} i spel
+                      </span>
+                    )}
                     {isMe && myDelta !== 0 && (
                       <span className={`tabular-nums text-xs font-semibold ${
                         myDelta > 0 ? "text-[var(--win)]" : "text-[var(--loss)]"

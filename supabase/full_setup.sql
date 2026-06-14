@@ -1712,6 +1712,50 @@ grant  execute on function settle_special_market(uuid, text) to service_role;
 
 
 -- ============================================================
+-- get_league_locked_stakes — net-worth helper for the standings
+-- (migration 20260614000001)
+-- ============================================================
+-- Returns per-member stakes tied up in open/locked match slips and active
+-- special bets. SECURITY DEFINER so it can sum special_bets across the league
+-- (those rows are owner-only under RLS to keep picks hidden) while exposing
+-- only aggregate amounts, never selection_text. Caller must be a league member.
+
+create or replace function get_league_locked_stakes(p_league_id uuid)
+returns table (
+  league_member_id uuid,
+  locked_match     bigint,
+  locked_special   bigint
+)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select
+    lm.id,
+    coalesce((
+      select sum(bs.stake)
+      from bet_slips bs
+      where bs.league_member_id = lm.id
+        and bs.status in ('open', 'locked')
+    ), 0)::bigint as locked_match,
+    coalesce((
+      select sum(sb.stake)
+      from special_bets sb
+      where sb.league_member_id = lm.id
+        and sb.status = 'active'
+    ), 0)::bigint as locked_special
+  from league_members lm
+  where lm.league_id = p_league_id
+    and lm.is_active = true
+    and is_league_member(p_league_id);
+$$;
+
+revoke all     on function get_league_locked_stakes(uuid) from public;
+grant  execute on function get_league_locked_stakes(uuid) to authenticated;
+
+
+-- ============================================================
 -- Migration 0012 — Knockout slot descriptions
 -- ============================================================
 
