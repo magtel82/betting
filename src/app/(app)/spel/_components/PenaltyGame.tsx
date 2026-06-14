@@ -391,36 +391,77 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
   );
 }
 
-// ─── Keeper character (blocky, Mario-ish) ──────────────────────────────────────
+// ─── Keeper character (SVG, cartoon-pixel) ─────────────────────────────────────
 function Keeper({ x, dive, high }: { x: number; dive: number; high: boolean }) {
-  const rotate = dive * 22;
-  const lift = high ? -12 : 0;
+  const rotate = dive * 16;
+  const lift = high ? -14 : 0;
   return (
     <div
       className="absolute z-10 -translate-x-1/2 will-change-transform"
       style={{
         left: `${x}%`,
-        top: `${GOAL.bottom - 30}%`,
-        height: "30%",
+        top: `${GOAL.bottom - 33}%`,
+        height: "34%",
+        width: "27%",
         transform: `translateX(-50%) translateY(${lift}%) rotate(${rotate}deg)`,
         transition: "left .45s cubic-bezier(.3,.7,.4,1), transform .45s cubic-bezier(.3,.7,.4,1)",
       }}
       aria-hidden
     >
-      <div className="relative flex h-full w-9 flex-col items-center">
-        {/* gloves up */}
-        <div className="absolute -top-1 flex w-[160%] justify-between">
-          <span className="h-2.5 w-2.5 rounded-[2px] bg-white border-2 border-gray-900" />
-          <span className="h-2.5 w-2.5 rounded-[2px] bg-white border-2 border-gray-900" />
-        </div>
-        {/* head */}
-        <div className="mt-1 h-3 w-3 rounded-[2px] bg-[#f5c073] border-2 border-gray-900" />
-        {/* body / jersey */}
-        <div className="-mt-0.5 h-[52%] w-7 rounded-[3px] bg-[#16a34a] border-2 border-gray-900" />
-        {/* shorts */}
-        <div className="h-[18%] w-7 rounded-b-[3px] bg-gray-900" />
-      </div>
+      <KeeperSvg />
     </div>
+  );
+}
+
+const JERSEY = "#fb923c";   // orange keeper kit
+const SHORTS = "#1f2937";   // navy
+const SKIN   = "#f7c89a";
+const OUTLINE = "#111827";
+
+function KeeperSvg() {
+  return (
+    <svg viewBox="-6 0 112 132" preserveAspectRatio="xMidYMax meet" className="h-full w-full overflow-visible">
+      <g stroke={OUTLINE} strokeWidth={4} strokeLinejoin="round" strokeLinecap="round">
+        {/* Arms (behind torso), raised in a wide save pose */}
+        <rect x="6"  y="52" width="30" height="12" rx="6" fill={JERSEY} transform="rotate(18 34 58)" />
+        <rect x="64" y="52" width="30" height="12" rx="6" fill={JERSEY} transform="rotate(-18 66 58)" />
+
+        {/* Legs + boots */}
+        <rect x="39" y="98"  width="9"  height="20" rx="3" fill={SKIN} />
+        <rect x="52" y="98"  width="9"  height="20" rx="3" fill={SKIN} />
+        <rect x="35" y="114" width="15" height="9"  rx="4" fill={OUTLINE} />
+        <rect x="50" y="114" width="15" height="9"  rx="4" fill={OUTLINE} />
+
+        {/* Shorts */}
+        <rect x="34" y="84" width="32" height="20" rx="6" fill={SHORTS} />
+
+        {/* Torso / jersey */}
+        <rect x="33" y="48" width="34" height="42" rx="9" fill={JERSEY} />
+        {/* collar */}
+        <path d="M44 50 L50 57 L56 50" fill="none" stroke={OUTLINE} strokeWidth={3.5} />
+
+        {/* Neck */}
+        <rect x="46" y="42" width="8" height="8" rx="2" fill={SKIN} />
+
+        {/* Head */}
+        <circle cx="50" cy="33" r="14" fill={SKIN} />
+        {/* Cap dome + brim */}
+        <path d="M37 31 a13 13 0 0 1 26 0 Z" fill={JERSEY} />
+        <path d="M50 31 q15 -1 19 5 q-10 2 -19 -2 Z" fill={JERSEY} />
+
+        {/* Gloves */}
+        <rect x="-4" y="40" width="20" height="19" rx="7" fill="#ffffff" />
+        <rect x="84" y="40" width="20" height="19" rx="7" fill="#ffffff" />
+        {/* glove cuffs */}
+        <rect x="13" y="44" width="6" height="13" rx="2.5" fill="#ef4444" />
+        <rect x="81" y="44" width="6" height="13" rx="2.5" fill="#ef4444" />
+      </g>
+
+      {/* Face — drawn without the heavy outline */}
+      <circle cx="45" cy="35" r="2.1" fill={OUTLINE} />
+      <circle cx="55" cy="35" r="2.1" fill={OUTLINE} />
+      <path d="M45 40 q5 4 10 0" fill="none" stroke={OUTLINE} strokeWidth={2.4} strokeLinecap="round" />
+    </svg>
   );
 }
 
