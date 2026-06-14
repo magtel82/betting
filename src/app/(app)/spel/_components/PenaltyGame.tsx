@@ -12,7 +12,13 @@ const GOAL = {
   innerL: 19, innerR: 81,         // inner net edges (ball travels within)
 };
 const BALL_SPOT = { x: 50, y: 82 };
-const KEEPER_COLS = [0.27, 0.5, 0.73]; // x fraction within inner goal for the 3 dive columns
+
+// Keeper rest position (its centre, in stage %) and how far it can reach to
+// pull off a save. Save/goal is decided purely by whether the keeper's dive
+// lands within this reach of the ball — so the visual always matches the result.
+const KEEPER_HOME = { x: 50, y: 33 };
+const REACH_X = 12;
+const REACH_Y = 11;
 
 const LIVES_START = 3;
 
@@ -27,6 +33,9 @@ function triangle(x: number) {
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
+function clamp(v: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, v));
+}
 
 export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow[]; hasPlayed: boolean }) {
   const router = useRouter();
@@ -38,7 +47,7 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
 
   // Locked shot params + animated targets
   const [ballPos, setBallPos]     = useState({ x: BALL_SPOT.x, y: BALL_SPOT.y, scale: 1 });
-  const [keeper, setKeeper]       = useState({ x: 50, dive: 0, high: false });
+  const [keeper, setKeeper]       = useState({ x: KEEPER_HOME.x, y: KEEPER_HOME.y, diving: false });
   const [flying, setFlying]       = useState(false);
 
   // Submission feedback
@@ -100,31 +109,45 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
   }, [router]);
 
   // ── Shot resolution ──
+  // Everything is continuous. The keeper lunges to a guessed point (gx, gy) and
+  // the ball flies to (ballX, ballY). A save happens iff the keeper's dive lands
+  // within REACH of the ball — the exact same point we render. So whatever the
+  // player sees on screen is, by construction, the real outcome.
   const resolveShot = useCallback((aimX: number, power: number) => {
-    const col = aimX < 0.34 ? 0 : aimX < 0.67 ? 1 : 2;
     const over = power > 0.9;
-    const rowHigh = power >= 0.5 && !over;
 
-    const d = scoreRef.current;
-    const pCorrect = Math.min(0.30 + d * 0.06, 0.78);
-    const guessCol = Math.random() < pCorrect ? col : Math.floor(Math.random() * 3);
-    const guessHigh = Math.random() < (0.34 + d * 0.03);
-
-    let result: ShotResult;
-    if (over) result = "over";
-    else if (guessCol === col && guessHigh === rowHigh) result = "save";
-    else result = "goal";
-
-    // Ball target within the goal mouth (continuous for natural flight)
-    const targetX = lerp(GOAL.innerL, GOAL.innerR, aimX);
-    const targetY = over
+    // Where the ball ends up.
+    const ballX = lerp(GOAL.innerL, GOAL.innerR, aimX);
+    const ballY = over
       ? GOAL.top - 8                                   // sails over the bar
-      : lerp(GOAL.bottom - 3, GOAL.top + 3, power / 0.9);
+      : lerp(GOAL.bottom - 2, GOAL.top + 2, power / 0.9);
 
-    // Keeper goes to its guessed column + height
-    const keeperX = lerp(GOAL.innerL, GOAL.innerR, KEEPER_COLS[guessCol]);
+    // Keeper skill grows with the current score: dives closer, guesses wrong
+    // less often. Early on it's clumsy (easy goals), later it's sharp.
+    const skill = Math.min(scoreRef.current / 12, 1);
+    const wrongWay = Math.random() < lerp(0.42, 0.16, skill);
 
-    return { result, targetX, targetY, keeperX, guessHigh };
+    let gx: number, gy: number;
+    if (wrongWay) {
+      // Commits the wrong way — dives somewhere it isn't.
+      gx = lerp(GOAL.innerL + 5, GOAL.innerR - 5, Math.random());
+      gy = lerp(GOAL.top + 4, GOAL.bottom - 2, Math.random());
+    } else {
+      // Reads the shot and lunges toward the ball with some error.
+      const spreadX = lerp(26, 11, skill);
+      const spreadY = lerp(20, 10, skill);
+      gx = ballX + (Math.random() * 2 - 1) * spreadX;
+      gy = ballY + (Math.random() * 2 - 1) * spreadY;
+    }
+    gx = clamp(gx, GOAL.innerL + 3, GOAL.innerR - 3);
+    gy = clamp(gy, GOAL.top + 2, GOAL.bottom + 2);
+
+    // Save = keeper's dive overlaps the ball (elliptical reach). Over is always a miss.
+    const dx = (ballX - gx) / REACH_X;
+    const dy = (ballY - gy) / REACH_Y;
+    const result: ShotResult = over ? "over" : (dx * dx + dy * dy <= 1 ? "save" : "goal");
+
+    return { result, ballX, ballY, gx, gy };
   }, []);
 
   // ── Main tap handler ──
@@ -138,7 +161,7 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
       setFinalInfo(null);
       setResultText(null);
       setBallPos({ x: BALL_SPOT.x, y: BALL_SPOT.y, scale: 1 });
-      setKeeper({ x: 50, dive: 0, high: false });
+      setKeeper({ x: KEEPER_HOME.x, y: KEEPER_HOME.y, diving: false });
       setFlying(false);
       resetTimer();
       setPhase("aim");
@@ -158,11 +181,13 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
 
       setPhase("shoot");
       setFlying(true);
-      // Keeper dives
-      const diveDir = shot.keeperX < 45 ? -1 : shot.keeperX > 55 ? 1 : 0;
-      setKeeper({ x: shot.keeperX, dive: diveDir, high: shot.guessHigh });
-      // Ball flies
-      setBallPos({ x: shot.targetX, y: shot.targetY, scale: 0.55 });
+      // Keeper lunges to its guessed point
+      setKeeper({ x: shot.gx, y: shot.gy, diving: true });
+      // Ball flies — on a save it ends in the keeper's gloves (snapped to the
+      // dive point) so it visibly looks caught; otherwise it reaches its target.
+      const endX = shot.result === "save" ? shot.gx : shot.ballX;
+      const endY = shot.result === "save" ? shot.gy : shot.ballY;
+      setBallPos({ x: endX, y: endY, scale: 0.55 });
 
       // Resolve after the flight animation
       window.setTimeout(() => {
@@ -188,7 +213,7 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
           setResultText(null);
           setFlying(false);
           setBallPos({ x: BALL_SPOT.x, y: BALL_SPOT.y, scale: 1 });
-          setKeeper({ x: 50, dive: 0, high: false });
+          setKeeper({ x: KEEPER_HOME.x, y: KEEPER_HOME.y, diving: false });
 
           if (nextLives <= 0) {
             setPhase("over");
@@ -263,7 +288,7 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
              style={{ left: `${BALL_SPOT.x}%`, top: `${BALL_SPOT.y + 4}%` }} aria-hidden />
 
         {/* Keeper */}
-        <Keeper x={keeper.x} dive={keeper.dive} high={keeper.high} />
+        <Keeper x={keeper.x} y={keeper.y} diving={keeper.diving} />
 
         {/* Ball */}
         <div
@@ -392,19 +417,22 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
 }
 
 // ─── Keeper character (SVG, cartoon-pixel) ─────────────────────────────────────
-function Keeper({ x, dive, high }: { x: number; dive: number; high: boolean }) {
-  const rotate = dive * 16;
-  const lift = high ? -14 : 0;
+// Centre-anchored at (x, y) in stage % — the same point used to decide saves —
+// so wherever the keeper is drawn is exactly where it can reach.
+function Keeper({ x, y, diving }: { x: number; y: number; diving: boolean }) {
+  const lean = clamp((x - KEEPER_HOME.x) / 2.6, -22, 22); // tilt toward the dive
   return (
     <div
-      className="absolute z-10 -translate-x-1/2 will-change-transform"
+      className="absolute z-10 will-change-transform"
       style={{
         left: `${x}%`,
-        top: `${GOAL.bottom - 33}%`,
-        height: "34%",
+        top: `${y}%`,
+        height: "26%",
         width: "27%",
-        transform: `translateX(-50%) translateY(${lift}%) rotate(${rotate}deg)`,
-        transition: "left .45s cubic-bezier(.3,.7,.4,1), transform .45s cubic-bezier(.3,.7,.4,1)",
+        transform: `translate(-50%, -50%) rotate(${lean}deg)`,
+        transition: diving
+          ? "left .42s cubic-bezier(.2,.7,.3,1.15), top .42s cubic-bezier(.2,.7,.3,1.15), transform .42s cubic-bezier(.2,.7,.3,1.15)"
+          : "left .3s ease-out, top .3s ease-out, transform .3s ease-out",
       }}
       aria-hidden
     >
