@@ -226,6 +226,29 @@ export default async function DashboardPage() {
           </Link>
         )}
 
+        {/* ── Straffspel-ingång ─────────────────────────────────────────────── */}
+        <Link
+          href="/spel"
+          className="relative flex items-center gap-3 overflow-hidden rounded-xl px-4 py-3 shadow-sm transition-transform active:scale-[0.99]"
+          style={{ background: "linear-gradient(110deg, #0a1022 0%, #14224c 55%, #1d7a36 130%)" }}
+        >
+          {/* floodlight glow */}
+          <span className="pointer-events-none absolute inset-0" aria-hidden
+                style={{ background: "radial-gradient(120% 80% at 12% -20%, rgba(186,230,253,.25), transparent 60%)" }} />
+          <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white/10 text-xl">⚽</span>
+          <div className="relative flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-bold text-white">Straffspel</p>
+              <span className="rounded-full bg-[#0c1330] px-1.5 py-0.5 font-mono text-[8px] font-black uppercase tracking-[0.15em] text-[#fde047]">VM 2026</span>
+            </div>
+            <p className="text-xs text-sky-200/80">Klarar du fler straffar än polarna? 🧤</p>
+          </div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+               strokeLinecap="round" strokeLinejoin="round" className="relative h-4 w-4 shrink-0 text-sky-200/70" aria-hidden>
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </Link>
+
         {/* ── Aktiva slip ───────────────────────────────────────────────────── */}
         <section>
           <div className="mb-2 flex items-center justify-between">
