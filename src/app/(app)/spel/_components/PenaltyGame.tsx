@@ -41,6 +41,7 @@ const SAVE_TAUNTS = [
   "Kioskvältare? Knappast.",
   "Snälla, sluta. 😬",
   "Ynkligt försök. 😒",
+  "SOPA! 🧹",
 ];
 const OVER_TAUNTS = [
   "ÖVER RIBBAN! 🚀",
