@@ -6,21 +6,51 @@ import { submitPenaltyScoreAction } from "../actions";
 import type { LeaderRow } from "../page";
 
 // ─── Geometry (all values are % of the square-ish stage) ───────────────────────
+// Goal-mouth proportions follow a real goal (~2.6 : 1 wide-to-tall in this view).
 const GOAL = {
-  top: 14, bottom: 46,            // goal-mouth vertical band
-  postL: 16, postR: 84,           // outer posts
-  innerL: 19, innerR: 81,         // inner net edges (ball travels within)
+  top: 17, bottom: 41,            // goal-mouth vertical band (24% tall)
+  postL: 10, postR: 90,           // outer posts (80% wide)
+  innerL: 13.5, innerR: 86.5,     // inner net edges (ball travels within)
 };
-const BALL_SPOT = { x: 50, y: 82 };
+const BALL_SPOT = { x: 50, y: 84 };
 
 // Keeper rest position (its centre, in stage %) and how far it can reach to
 // pull off a save. Save/goal is decided purely by whether the keeper's dive
 // lands within this reach of the ball — so the visual always matches the result.
-const KEEPER_HOME = { x: 50, y: 33 };
+const KEEPER_HOME = { x: 50, y: 31 };
 const REACH_X = 12;
-const REACH_Y = 11;
+const REACH_Y = 8;
 
 const LIVES_START = 3;
+
+// ── Splash texts ──
+const GOAL_CHEERS = ["MÅÅÅL! ⚽", "I KRYSSET! 🎯", "DÄR SATT DEN! 🔥", "OemotsTÅNDLIGT! 💥", "ÅSKNYGEL! ⚡"];
+const SAVE_TAUNTS = [
+  "Pinsamt. 🤡",
+  "Min mormor räddar bättre",
+  "Var det ALLT? 🥱",
+  "Hahaha, nej. 🧤",
+  "Soptipp! 🗑️",
+  "Lägg ner, brorsan 💀",
+  "Käka boll! 🧤",
+  "Trams. 🙄",
+  "Skäms. 😴",
+  "Den tog jag i sömnen 😪",
+  "Nää du. 👎",
+  "Kioskvältare? Knappast.",
+  "Snälla, sluta. 😬",
+  "Var det med FLIT? 🤔",
+];
+const OVER_TAUNTS = [
+  "ÖVER RIBBAN! 🚀",
+  "Sikta lägre, geni 🙃",
+  "Ut på parkeringen! 🅿️",
+  "Publiken tackar! 🎁",
+  "Rymden ringde 🛸",
+  "Är du målvakt eller?? 😂",
+  "HAHA, läktaren! 💀",
+];
+function pick(a: string[]) { return a[Math.floor(Math.random() * a.length)]; }
 
 type Phase = "idle" | "aim" | "power" | "shoot" | "result" | "over";
 type ShotResult = "goal" | "save" | "over";
@@ -193,9 +223,9 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
       window.setTimeout(() => {
         const isGoal = shot.result === "goal";
         setResultText(
-          isGoal                    ? { text: "MÅÅÅL! ⚽",      kind: "goal" } :
-          shot.result === "save"    ? { text: "RÄDDNING! 🧤",   kind: "save" } :
-                                      { text: "ÖVER RIBBAN! 😱", kind: "over" }
+          isGoal                    ? { text: pick(GOAL_CHEERS), kind: "goal" } :
+          shot.result === "save"    ? { text: pick(SAVE_TAUNTS), kind: "save" } :
+                                      { text: pick(OVER_TAUNTS), kind: "over" }
         );
         setPhase("result");
 
@@ -207,6 +237,9 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
           nextLives = livesRef.current - 1;
           setLives(nextLives);
         }
+
+        // Taunts flash by fast; goals get a beat longer to celebrate.
+        const holdMs = nextLives <= 0 ? 1100 : isGoal ? 1050 : 780;
 
         // Next shot or game over
         window.setTimeout(() => {
@@ -222,7 +255,7 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
             resetTimer();
             setPhase("aim");
           }
-        }, 1150);
+        }, holdMs);
       }, 620);
       return;
     }
@@ -261,31 +294,70 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
         disabled={!canTap}
         aria-label="Spelplan — tryck för att sikta och skjuta"
         className="relative block w-full overflow-hidden rounded-2xl border-[3px] border-gray-900 shadow-[4px_4px_0_0_#111827] aspect-[4/5] select-none"
-        style={{ background: "linear-gradient(#7dd3fc 0%, #bae6fd 38%, #4ade80 38%, #22c55e 100%)" }}
+        style={{ background: "linear-gradient(#0a1022 0%, #0d1530 24%, #14224c 34%, #1d7a36 34%, #115226 100%)" }}
       >
-        {/* Sun */}
-        <div className="absolute left-3 top-3 h-8 w-8 rounded-full bg-yellow-300 border-2 border-gray-900" aria-hidden />
-        {/* Crowd stripe */}
-        <div className="absolute left-0 right-0 top-[30%] h-[8%] flex" aria-hidden>
-          {Array.from({ length: 24 }).map((_, i) => (
-            <div key={i} className="flex-1" style={{ background: ["#f87171","#fbbf24","#60a5fa","#34d399","#f472b6"][i % 5], opacity: 0.5 }} />
-          ))}
+        {/* Floodlight glow from the top corners */}
+        <div className="pointer-events-none absolute inset-0" aria-hidden style={{
+          background:
+            "radial-gradient(130% 55% at 16% -10%, rgba(186,230,253,.30), transparent 60%)," +
+            "radial-gradient(130% 55% at 84% -10%, rgba(186,230,253,.30), transparent 60%)",
+        }} />
+        {/* Floodlight banks */}
+        <div className="absolute left-[13%] top-1 flex gap-[2px]" aria-hidden>
+          {[0,1,2].map((i) => <span key={i} className="h-1.5 w-2.5 rounded-[1px] bg-sky-100 shadow-[0_0_7px_2px_rgba(186,230,253,.55)]" />)}
+        </div>
+        <div className="absolute right-[13%] top-1 flex gap-[2px]" aria-hidden>
+          {[0,1,2].map((i) => <span key={i} className="h-1.5 w-2.5 rounded-[1px] bg-sky-100 shadow-[0_0_7px_2px_rgba(186,230,253,.55)]" />)}
+        </div>
+
+        {/* Stands behind the goal */}
+        <div className="absolute left-0 right-0" style={{ top: "12%", height: "23%" }} aria-hidden>
+          <div className="absolute inset-0 bg-[#0b1228]" />
+          <div className="absolute inset-0 opacity-50"
+               style={{ backgroundImage: "radial-gradient(rgba(255,255,255,.55) 1px, transparent 1px)", backgroundSize: "6px 6px" }} />
+          <div className="absolute inset-0"
+               style={{ backgroundImage: "repeating-linear-gradient(0deg, rgba(0,0,0,.4) 0 1px, transparent 1px 8px)" }} />
+        </div>
+
+        {/* Scoreboard — VM 2026 */}
+        <div className="absolute left-1/2 top-[3%] z-[1] -translate-x-1/2" aria-hidden>
+          <div className="rounded-md border-2 border-gray-900 bg-[#0c1330] px-2.5 py-1 text-center shadow-[2px_2px_0_0_#111827]">
+            <div className="font-mono text-[11px] font-black leading-none tracking-[0.2em] text-[#fde047]">VM&nbsp;2026</div>
+            <div className="mt-0.5 font-mono text-[7px] font-bold leading-none tracking-[0.25em] text-sky-300/80">USA · CAN · MEX</div>
+          </div>
+        </div>
+
+        {/* Pitch mowing stripes */}
+        <div className="absolute bottom-0 left-0 right-0" style={{ top: "34%",
+          backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 16px, rgba(0,0,0,.07) 16px 32px)" }} aria-hidden />
+        {/* Penalty arc */}
+        <div className="absolute left-1/2 -translate-x-1/2 rounded-[50%] border-2 border-white/25"
+             style={{ width: "42%", height: "11%", top: `${BALL_SPOT.y - 10}%` }} aria-hidden />
+
+        {/* Perimeter ad board — WORLD CUP 2026 */}
+        <div className="absolute left-[5%] right-[5%] overflow-hidden rounded-[2px] border border-gray-900 bg-[#0c1330]"
+             style={{ top: `${GOAL.bottom + 1.5}%`, height: "4.5%" }} aria-hidden>
+          <div className="flex h-full items-center justify-center">
+            <span className="whitespace-nowrap font-mono text-[7px] font-black uppercase tracking-[0.22em] text-[#fde047]/90">
+              ⚽ FIFA WORLD CUP 2026 · FIFA WORLD CUP 2026 ⚽
+            </span>
+          </div>
         </div>
 
         {/* Goal frame */}
         <div className="absolute" style={{ left: `${GOAL.postL}%`, right: `${100 - GOAL.postR}%`, top: `${GOAL.top}%`, height: `${GOAL.bottom - GOAL.top}%` }} aria-hidden>
           {/* Net */}
-          <div className="absolute inset-0 bg-white/35"
-               style={{ backgroundImage: "repeating-linear-gradient(0deg, #ffffff66 0 1px, transparent 1px 9px), repeating-linear-gradient(90deg, #ffffff66 0 1px, transparent 1px 9px)" }} />
+          <div className="absolute inset-0 bg-white/10"
+               style={{ backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,.22) 0 1px, transparent 1px 8px), repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 1px, transparent 1px 8px)" }} />
           {/* Posts + bar */}
-          <div className="absolute -left-[6px] -top-[6px] bottom-0 w-[6px] bg-white border-2 border-gray-900" />
-          <div className="absolute -right-[6px] -top-[6px] bottom-0 w-[6px] bg-white border-2 border-gray-900" />
-          <div className="absolute -left-[6px] -right-[6px] -top-[6px] h-[6px] bg-white border-2 border-gray-900" />
+          <div className="absolute -left-[5px] -top-[5px] bottom-0 w-[5px] rounded-[1px] bg-white shadow-[0_0_0_1.5px_#0b1228]" />
+          <div className="absolute -right-[5px] -top-[5px] bottom-0 w-[5px] rounded-[1px] bg-white shadow-[0_0_0_1.5px_#0b1228]" />
+          <div className="absolute -left-[5px] -right-[5px] -top-[5px] h-[5px] rounded-[1px] bg-white shadow-[0_0_0_1.5px_#0b1228]" />
         </div>
 
         {/* Penalty spot */}
-        <div className="absolute h-2 w-2 -translate-x-1/2 rounded-full bg-white border border-gray-900"
-             style={{ left: `${BALL_SPOT.x}%`, top: `${BALL_SPOT.y + 4}%` }} aria-hidden />
+        <div className="absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/90"
+             style={{ left: `${BALL_SPOT.x}%`, top: `${BALL_SPOT.y}%` }} aria-hidden />
 
         {/* Keeper */}
         <Keeper x={keeper.x} y={keeper.y} diving={keeper.diving} />
@@ -304,16 +376,10 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
           <span className="text-3xl leading-none drop-shadow">⚽</span>
         </div>
 
-        {/* Aim meter — horizontal tick gliding across the goal */}
+        {/* Aim meter — vertical tick gliding across the goal mouth */}
         {phase === "aim" && (
-          <>
-            <div className="absolute z-30 h-[34%] w-[3px] -translate-x-1/2 bg-red-500 shadow-[0_0_0_1px_#111827]"
-                 ref={aimEl} style={{ left: "50%", top: `${GOAL.top}%` }} />
-            <div className="absolute z-30 -translate-x-1/2"
-                 style={{ left: `${(GOAL.innerL + GOAL.innerR) / 2}%`, top: `${GOAL.bottom + 2}%` }}>
-              <span className="font-mono text-[10px] font-black uppercase tracking-widest text-white drop-shadow-[1px_1px_0_#111827]">‹ sikta ›</span>
-            </div>
-          </>
+          <div className="absolute z-30 w-[3px] -translate-x-1/2 rounded bg-red-500 shadow-[0_0_8px_1px_rgba(239,68,68,.8)]"
+               ref={aimEl} style={{ left: "50%", top: `${GOAL.top - 1}%`, height: `${GOAL.bottom - GOAL.top + 2}%` }} />
         )}
 
         {/* Power meter — vertical bar on the right */}
@@ -326,10 +392,10 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
 
         {/* Result splash */}
         {resultText && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center" aria-hidden>
+          <div className="absolute inset-0 z-40 flex items-center justify-center px-6" aria-hidden>
             <span
-              className={`pg-pop font-mono text-3xl font-black uppercase tracking-tight drop-shadow-[2px_2px_0_#111827] ${
-                resultText.kind === "goal" ? "text-yellow-300" : resultText.kind === "save" ? "text-sky-200" : "text-red-300"
+              className={`pg-pop max-w-full rounded-xl border-2 border-gray-900 bg-gray-900/80 px-4 py-2 text-center font-mono text-2xl font-black uppercase leading-tight tracking-tight shadow-[3px_3px_0_0_#111827] ${
+                resultText.kind === "goal" ? "text-yellow-300 -rotate-2" : resultText.kind === "save" ? "text-sky-200 rotate-1" : "text-red-300 -rotate-1"
               }`}
             >
               {resultText.text}
@@ -354,7 +420,8 @@ export function PenaltyGame({ leaderboard, hasPlayed }: { leaderboard: LeaderRow
               </>
             ) : (
               <>
-                <span className="text-5xl">🥅</span>
+                <span className="rounded-full border-2 border-gray-900 bg-[#0c1330] px-3 py-1 font-mono text-[10px] font-black uppercase tracking-[0.25em] text-[#fde047] shadow-[2px_2px_0_0_#111827]">VM 2026</span>
+                <span className="text-5xl drop-shadow-[2px_2px_0_#111827]">🥅</span>
                 <span className="font-mono text-xl font-black uppercase tracking-tight text-white drop-shadow-[2px_2px_0_#111827]">Straffspecialisten</span>
                 <span className="max-w-[80%] text-center text-[11px] leading-relaxed text-white/80">
                   Sikta, tajma kraften och lura målvakten. Tre missar och du är ute!
@@ -427,8 +494,8 @@ function Keeper({ x, y, diving }: { x: number; y: number; diving: boolean }) {
       style={{
         left: `${x}%`,
         top: `${y}%`,
-        height: "26%",
-        width: "27%",
+        height: "21%",
+        width: "22%",
         transform: `translate(-50%, -50%) rotate(${lean}deg)`,
         transition: diving
           ? "left .42s cubic-bezier(.2,.7,.3,1.15), top .42s cubic-bezier(.2,.7,.3,1.15), transform .42s cubic-bezier(.2,.7,.3,1.15)"
