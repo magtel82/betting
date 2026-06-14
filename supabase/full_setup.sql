@@ -1153,6 +1153,9 @@ begin
         and (placed_at at time zone 'Europe/Stockholm')::date = p_fee_date
     ) into v_is_active;
 
+    -- Activity check 2: has a slip covering a match today.
+    -- Any non-cancelled status counts — a won/lost/void slip still means the
+    -- player bet on that day's match (it may have auto-settled already).
     if not v_is_active then
       select exists(
         select 1
@@ -1160,7 +1163,7 @@ begin
         join bet_slip_selections bss on bss.slip_id = bs.id
         join matches m              on m.id          = bss.match_id
         where bs.league_member_id = v_member.id
-          and bs.status in ('open', 'locked')
+          and bs.status <> 'cancelled'
           and (m.scheduled_at at time zone 'Europe/Stockholm')::date = p_fee_date
       ) into v_is_active;
     end if;
@@ -1170,7 +1173,7 @@ begin
       continue;
     end if;
 
-    v_charge := least(50, v_member.match_wallet);
+    v_charge := least(150, v_member.match_wallet);
 
     update league_members
     set match_wallet = match_wallet - v_charge
