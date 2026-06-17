@@ -126,14 +126,28 @@ export function BetPage({
   );
 
   const dayGroups = useMemo(() => {
-    const map = new Map<string, { label: string; matches: MatchWithTeamsAndOdds[] }>();
+    const map = new Map<string, { key: string; label: string; matches: MatchWithTeamsAndOdds[] }>();
     for (const m of upcomingMatches) {
       const key = swDateKey(m.scheduled_at);
-      if (!map.has(key)) map.set(key, { label: swDateLabel(m.scheduled_at), matches: [] });
+      if (!map.has(key)) map.set(key, { key, label: swDateLabel(m.scheduled_at), matches: [] });
       map.get(key)!.matches.push(m);
     }
     return Array.from(map.values());
   }, [upcomingMatches]);
+
+  // Scroll to a specific day when arriving via /bet#day-<YYYY-MM-DD> (e.g. from
+  // the calendar). Runs once the day sections have rendered.
+  const didScrollToHash = useRef(false);
+  useEffect(() => {
+    if (didScrollToHash.current) return;
+    const hash = window.location.hash;
+    if (!hash) return;
+    const el = document.getElementById(hash.slice(1));
+    if (el) {
+      didScrollToHash.current = true;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [dayGroups]);
 
   const matchMap = useMemo(() => {
     const m = new Map<string, MatchWithTeamsAndOdds>();
@@ -355,8 +369,8 @@ export function BetPage({
 
             {/* Match list grouped by day */}
             <div className="space-y-6">
-              {dayGroups.map(({ label, matches: dayMatches }) => (
-                <section key={label}>
+              {dayGroups.map(({ key, label, matches: dayMatches }) => (
+                <section key={key} id={`day-${key}`} className="scroll-mt-20">
                   <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 first-letter:capitalize">
                     {label}
                   </h2>

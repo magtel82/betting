@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireActiveUser } from "@/lib/auth";
 import { TopBar } from "@/components/nav/TopBar";
 import { StallningTabs } from "../_components/StallningTabs";
@@ -141,6 +142,9 @@ export default async function KalenderPage() {
           <LegendItem color="bg-[var(--win)]"  label="Bet lagd" />
           <LegendItem color="bg-[var(--loss)]" label="Ingen bet" />
           <LegendItem color="bg-[var(--primary-50)] ring-1 ring-[var(--primary)]" label="Kommande utan bet" />
+          <span className="w-full text-xs text-gray-400">
+            Tryck på en kommande matchdag för att spela på den.
+          </span>
         </div>
 
         {/* ── Calendars ─────────────────────────────────────────────────────── */}
@@ -218,11 +222,11 @@ function MonthCalendar({
               }
             }
 
-            return (
-              <div
-                key={day}
-                className={`relative flex aspect-square flex-col items-center justify-center rounded-lg ${bg}`}
-              >
+            // Bettable = a match day that hasn't passed → links to that day in "Spela".
+            const bettable = isMatch && dateStr >= today;
+
+            const inner = (
+              <>
                 <span className={`text-sm leading-none ${text}`}>{day}</span>
                 {isMatch && count > 1 && (
                   <span className={`mt-0.5 text-[9px] leading-none ${
@@ -231,6 +235,27 @@ function MonthCalendar({
                     {count}
                   </span>
                 )}
+              </>
+            );
+
+            const cellClass = `relative flex aspect-square flex-col items-center justify-center rounded-lg ${bg}`;
+
+            if (bettable) {
+              return (
+                <Link
+                  key={day}
+                  href={`/bet#day-${dateStr}`}
+                  aria-label={`${count} ${count === 1 ? "match" : "matcher"} ${dateStr} – spela`}
+                  className={`${cellClass} transition-transform hover:scale-105 hover:ring-2 hover:ring-[var(--primary)] active:scale-95`}
+                >
+                  {inner}
+                </Link>
+              );
+            }
+
+            return (
+              <div key={day} className={cellClass}>
+                {inner}
               </div>
             );
           })}
