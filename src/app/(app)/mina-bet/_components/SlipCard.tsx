@@ -17,6 +17,9 @@ export interface SelectionRow {
     stage:        string;
     group_letter: string | null;
     scheduled_at: string;
+    status:       string;
+    home_score:   number | null;
+    away_score:   number | null;
     home_team:    { short_name: string; flag_code: string | null } | null;
     away_team:    { short_name: string; flag_code: string | null } | null;
   } | null;
@@ -184,6 +187,8 @@ export function SlipCard({ slip, showPlayer, isOwn, isNew = false }: Props) {
           const home  = match?.home_team;
           const away  = match?.away_team;
           const label = match ? stageLabel(match.stage, match.group_letter) : "";
+          const hasScore = match != null && match.home_score != null && match.away_score != null;
+          const isLive   = match?.status === "in_progress";
 
           return (
             <li key={sel.id} className="flex items-center justify-between gap-3 py-2.5">
@@ -194,11 +199,25 @@ export function SlipCard({ slip, showPlayer, isOwn, isNew = false }: Props) {
                   <>
                     <p className="truncate text-sm font-semibold text-gray-900">
                       <Flag code={home?.flag_code} className="text-base" /> {home?.short_name ?? "?"}
-                      <span className="mx-1 text-gray-300">–</span>
+                      {hasScore ? (
+                        <span className="mx-1.5 tabular-nums text-gray-900">
+                          {match!.home_score}<span className="text-gray-300">–</span>{match!.away_score}
+                        </span>
+                      ) : (
+                        <span className="mx-1 text-gray-300">–</span>
+                      )}
                       <Flag code={away?.flag_code} className="text-base" /> {away?.short_name ?? "?"}
                     </p>
-                    {label && (
-                      <p className="mt-0.5 text-[11px] uppercase tracking-wide text-gray-400">{label}</p>
+                    {(label || isLive) && (
+                      <p className="mt-0.5 flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-gray-400">
+                        {label}
+                        {isLive && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--loss-50)] px-1.5 py-0.5 font-bold text-[var(--loss)]">
+                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--loss)]" />
+                            Live
+                          </span>
+                        )}
+                      </p>
                     )}
                   </>
                 )}
