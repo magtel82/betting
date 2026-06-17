@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const TABS = [
   { href: "/stallning",          label: "🏆 Lista" },
+  { href: "/stallning/jag",      label: "📈 Jag" },
   { href: "/stallning/skams",    label: "📊 Stats" },
   { href: "/stallning/kalender", label: "📅 Kalender" },
 ];
@@ -20,7 +21,7 @@ export function StallningTabs() {
           <Link
             key={tab.href}
             href={tab.href}
-            className={`flex flex-1 items-center justify-center rounded-lg py-2 text-sm font-semibold transition-colors ${
+            className={`flex flex-1 items-center justify-center whitespace-nowrap rounded-lg px-1 py-2 text-xs font-semibold transition-colors sm:text-sm ${
               active
                 ? "bg-white text-gray-900 shadow-sm"
                 : "text-gray-500 hover:text-gray-700"
