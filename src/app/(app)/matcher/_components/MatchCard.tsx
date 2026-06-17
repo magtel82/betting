@@ -32,10 +32,10 @@ const STATUS_CONFIG: Record<MatchStatus, { label: string | null; cls: string; pi
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function TeamCol({ code, name }: { code: string; name: string }) {
+function TeamCol({ flag, name }: { flag: string | null | undefined; name: string }) {
   return (
     <div className="flex min-w-0 flex-1 flex-col items-center gap-1">
-      <FlagIcon code={code} className="text-2xl" />
+      <FlagIcon code={flag} label={name} className="text-2xl" />
       <span className="truncate text-center text-xs font-medium text-gray-800">{name}</span>
     </div>
   );
@@ -94,7 +94,7 @@ export function MatchCard({ match }: Props) {
       {/* Teams + score */}
       <div className="flex items-center gap-2">
         <TeamCol
-          code={match.home_team?.short_name ?? ""}
+          flag={match.home_team?.flag_code}
           name={match.home_team?.short_name ?? "TBD"}
         />
 
@@ -114,7 +114,7 @@ export function MatchCard({ match }: Props) {
         )}
 
         <TeamCol
-          code={match.away_team?.short_name ?? ""}
+          flag={match.away_team?.flag_code}
           name={match.away_team?.short_name ?? "TBD"}
         />
       </div>

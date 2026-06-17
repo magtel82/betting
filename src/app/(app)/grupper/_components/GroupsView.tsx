@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { GroupTable } from "./GroupTable";
+import { GroupMatches, type GroupMatch } from "./GroupMatches";
 import { BracketView } from "./BracketView";
 import type { TeamStanding } from "@/lib/group-standings";
 import type { BracketMatch } from "@/lib/knockout-bracket";
@@ -14,10 +15,11 @@ interface Props {
   groups:          Record<string, TeamStanding[]>;
   finishedByGroup: Record<string, number>;
   totalByGroup:    Record<string, number>;
+  matchesByGroup:  Record<string, GroupMatch[]>;
   bracketMatches:  BracketMatch[];
 }
 
-export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatches }: Props) {
+export function GroupsView({ groups, finishedByGroup, totalByGroup, matchesByGroup, bracketMatches }: Props) {
   const availableLetters = ALL_LETTERS.filter((l) => l in groups);
   const [view,    setView]    = useState<View>("groups");
   const [active,  setActive]  = useState<GroupLetter>(availableLetters[0] ?? "A");
@@ -100,14 +102,15 @@ export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatch
                 <div className="mx-auto w-full px-4 py-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {availableLetters.map((letter) => (
-                      <div key={letter}>
+                      <div key={letter} className="space-y-2">
                         <GroupTable
                           letter={letter}
                           standings={groups[letter] ?? []}
                         />
-                        <p className="mt-1 text-center text-xs text-gray-400">
+                        <p className="text-center text-xs text-gray-400">
                           {finishedByGroup[letter] ?? 0} av {totalByGroup[letter] ?? 0} matcher
                         </p>
+                        <GroupMatches matches={matchesByGroup[letter] ?? []} />
                       </div>
                     ))}
                   </div>
@@ -119,6 +122,10 @@ export function GroupsView({ groups, finishedByGroup, totalByGroup, bracketMatch
                   <p className="text-center text-xs text-gray-400">
                     {finished} av {total} matcher spelade
                   </p>
+                  <h3 className="pt-2 text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                    Matcher
+                  </h3>
+                  <GroupMatches matches={matchesByGroup[active] ?? []} />
                 </div>
               )}
             </>

@@ -48,7 +48,7 @@ function MatchCard({ match }: { match: BracketMatch }) {
         {/* Home */}
         <div className={`flex items-center gap-1.5 flex-1 min-w-0 ${homeWon ? "font-semibold" : ""}`}>
           {home.team ? (
-            <FlagIcon code={home.team.shortName} className="shrink-0 text-base" />
+            <FlagIcon code={home.team.flag} label={home.team.shortName} className="shrink-0 text-base" />
           ) : (
             <span className="shrink-0 w-5 h-5 rounded-full bg-gray-100 border border-gray-200 inline-block" />
           )}
@@ -76,7 +76,7 @@ function MatchCard({ match }: { match: BracketMatch }) {
             {away.team?.shortName ?? away.label}
           </span>
           {away.team ? (
-            <FlagIcon code={away.team.shortName} className="shrink-0 text-base" />
+            <FlagIcon code={away.team.flag} label={away.team.shortName} className="shrink-0 text-base" />
           ) : (
             <span className="shrink-0 w-5 h-5 rounded-full bg-gray-100 border border-gray-200 inline-block" />
           )}

@@ -1,41 +1,22 @@
-// Maps FIFA short_name codes to flag-icons ISO codes.
-// Subdivision flags (England, Scotland, Wales) use the gb-xxx format.
-const FIFA_TO_ISO: Record<string, string> = {
-  ALB: "al", ARG: "ar", AUS: "au", AUT: "at",
-  BEL: "be", BRA: "br",
-  CAN: "ca", CHI: "cl", CIV: "ci", COL: "co", CRC: "cr", CRO: "hr",
-  DEN: "dk",
-  ECU: "ec", EGY: "eg", ENG: "gb-eng", ESP: "es",
-  FRA: "fr",
-  GER: "de", GHA: "gh",
-  HON: "hn",
-  IRN: "ir", ITA: "it",
-  JAM: "jm", JPN: "jp", JOR: "jo",
-  KOR: "kr", KSA: "sa",
-  MAR: "ma", MEX: "mx",
-  NED: "nl", NGA: "ng", NOR: "no", NZL: "nz",
-  PAN: "pa", PAR: "py", PER: "pe", POL: "pl", POR: "pt",
-  QAT: "qa",
-  RSA: "za",
-  SCO: "gb-sct", SEN: "sn", SRB: "rs", SUI: "ch", SWE: "se",
-  TUN: "tn", TUR: "tr",
-  UKR: "ua", URU: "uy", USA: "us",
-  VEN: "ve",
-  WLS: "gb-wls",
-};
+// Renders a flag from a team's ISO flag_code (e.g. "se", "gb-eng"), the same
+// source of truth used across the app. Sizes with font-size via the `fi` class,
+// so callers control size through `className` (e.g. "text-2xl").
+//
+// NOTE: pass the DB `flag_code`, NOT the FIFA short_name. There is no FIFA→ISO
+// mapping here — that mapping was incomplete and caused missing flags.
 
 interface Props {
-  code: string;       // FIFA short_name, e.g. "ENG", "SCO"
-  className?: string; // extra Tailwind classes for sizing
+  code:       string | null | undefined; // ISO flag_code, e.g. "se", "gb-eng"
+  label?:     string;                     // accessible label, e.g. team short_name
+  className?: string;                     // extra Tailwind classes for sizing
 }
 
-export function FlagIcon({ code, className = "" }: Props) {
-  const iso = FIFA_TO_ISO[code?.toUpperCase()];
-  if (!iso) {
+export function FlagIcon({ code, label, className = "" }: Props) {
+  if (!code) {
     return (
       <span
         className={`inline-block align-middle text-gray-300 ${className}`}
-        aria-label={code}
+        aria-label={label}
       >
         🏳
       </span>
@@ -43,8 +24,8 @@ export function FlagIcon({ code, className = "" }: Props) {
   }
   return (
     <span
-      className={`fi fi-${iso} align-middle ${className}`}
-      aria-label={code}
+      className={`fi fi-${code} align-middle ${className}`}
+      aria-label={label}
       role="img"
     />
   );
