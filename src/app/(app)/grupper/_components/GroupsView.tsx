@@ -67,33 +67,30 @@ export function GroupsView({ groups, finishedByGroup, totalByGroup, matchesByGro
             <>
               {/* Group letter selector + Visa alla toggle */}
               <div className="sticky top-[61px] z-30 border-b border-gray-200 bg-white">
-                <div className="relative">
-                  <div className="flex gap-1.5 overflow-x-auto px-4 py-2 scrollbar-none">
-                    {availableLetters.map((letter) => (
-                      <button
-                        key={letter}
-                        onClick={() => { setActive(letter); setShowAll(false); }}
-                        className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                          !showAll && active === letter
-                            ? "bg-[var(--primary)] text-white shadow-sm"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      >
-                        {letter}
-                      </button>
-                    ))}
+                <div className="flex flex-wrap gap-1.5 px-4 py-2">
+                  {availableLetters.map((letter) => (
                     <button
-                      onClick={() => setShowAll((v) => !v)}
-                      className={`ml-1 shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                        showAll
+                      key={letter}
+                      onClick={() => { setActive(letter); setShowAll(false); }}
+                      className={`flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-sm font-medium transition-colors ${
+                        !showAll && active === letter
                           ? "bg-[var(--primary)] text-white shadow-sm"
-                          : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                     >
-                      Alla
+                      {letter}
                     </button>
-                  </div>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent" />
+                  ))}
+                  <button
+                    onClick={() => setShowAll((v) => !v)}
+                    className={`flex h-9 items-center justify-center rounded-full px-4 text-sm font-semibold transition-colors ${
+                      showAll
+                        ? "bg-[var(--primary)] text-white shadow-sm"
+                        : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    Alla
+                  </button>
                 </div>
               </div>
 
