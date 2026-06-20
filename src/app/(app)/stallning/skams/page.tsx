@@ -326,7 +326,7 @@ export default async function SkamsPage() {
       : { data: [] },
     memberIds.length > 0
       ? admin.from("bet_slips")
-          .select("id, league_member_id")
+          .select("id, league_member_id, stake")
           .in("league_member_id", memberIds)
           .neq("status", "cancelled")
       : { data: [] },
@@ -373,6 +373,30 @@ export default async function SkamsPage() {
     .sort((a, b) => b.missed - a.missed);
 
   const totalPastDays = pastMatchDays.size;
+
+  // ── Stake stats per player (non-cancelled slips) ───────────────────────────
+  type StakeRow = { league_member_id: string; stake: number };
+  const stakesByMember = new Map<string, number[]>();
+  for (const m of members) stakesByMember.set(m.id, []);
+  for (const s of (activeSlipsRes.data ?? []) as StakeRow[]) {
+    stakesByMember.get(s.league_member_id)?.push(s.stake);
+  }
+
+  type StakeEntry = { name: string; max: number; min: number; avg: number; count: number };
+  const stakeEntries: StakeEntry[] = members
+    .map((m) => {
+      const arr = stakesByMember.get(m.id) ?? [];
+      const sum = arr.reduce((a, b) => a + b, 0);
+      return {
+        name:  memberName(m.profile),
+        max:   arr.length ? Math.max(...arr) : 0,
+        min:   arr.length ? Math.min(...arr) : 0,
+        avg:   arr.length ? Math.round(sum / arr.length) : 0,
+        count: arr.length,
+      };
+    })
+    .filter((e) => e.count > 0)
+    .sort((a, b) => b.avg - a.avg);
 
   const players = buildPlayerData(
     members,
@@ -428,6 +452,49 @@ export default async function SkamsPage() {
             ))}
           </div>
         </section>
+
+        {/* ── Insatser ──────────────────────────────────────────────────────── */}
+        {stakeEntries.length > 0 && (
+          <section>
+            <div
+              className="mb-3 flex items-center gap-2 rounded-xl px-4 py-3 text-white"
+              style={{ background: "linear-gradient(135deg, #422006 0%, #854d0e 60%, #a16207 100%)" }}
+            >
+              <span className="text-xl" aria-hidden>💵</span>
+              <div>
+                <p className="font-bold">Insatser</p>
+                <p className="text-xs text-amber-200">Högsta, lägsta och snittinsats per spelare</p>
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+              {/* Header */}
+              <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 border-b border-gray-100 bg-gray-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                <span>Spelare</span>
+                <span className="w-14 text-right">Högst</span>
+                <span className="w-14 text-right">Lägst</span>
+                <span className="w-14 text-right text-gray-600">Snitt</span>
+              </div>
+              {/* Rows */}
+              {stakeEntries.map((e, i) => (
+                <div
+                  key={e.name}
+                  className={`grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 px-4 py-2.5 ${
+                    i < stakeEntries.length - 1 ? "border-b border-gray-50" : ""
+                  }`}
+                >
+                  <span className="truncate text-sm font-medium text-gray-800">{e.name}</span>
+                  <span className="w-14 text-right tabular-nums text-sm text-gray-500">{e.max.toLocaleString("sv-SE")}</span>
+                  <span className="w-14 text-right tabular-nums text-sm text-gray-500">{e.min.toLocaleString("sv-SE")}</span>
+                  <span className="w-14 text-right tabular-nums text-sm font-bold text-gray-900">{e.avg.toLocaleString("sv-SE")}</span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-center text-[11px] text-gray-400">
+              Baseras på lagda slip (annullerade räknas inte). Belopp i coins 🪙
+            </p>
+          </section>
+        )}
 
         {/* ── Missade matchdagar ────────────────────────────────────────────── */}
         {totalPastDays > 0 && (
