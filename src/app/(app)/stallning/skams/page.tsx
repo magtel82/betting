@@ -65,15 +65,24 @@ type PlayerData = {
   biggestWonPayout: number;  // 0 if no won slips
   highestWonOdds: number;    // 0 if no won slips
   lowestWonOdds: number;     // Infinity if no won slips
+  // stake metrics (non-cancelled slips)
+  maxStake: number;          // 0 if no slips
+  minStake: number;          // Infinity if no slips
+  avgStake: number | null;   // null if no slips
+  stakeCount: number;
 };
 
-function buildPlayerData(members: MemberRow[], slips: SlipRow[], fees: FeeRow[]): PlayerData[] {
+type StakeRow = { league_member_id: string; stake: number };
+
+function buildPlayerData(members: MemberRow[], slips: SlipRow[], fees: FeeRow[], stakeRows: StakeRow[]): PlayerData[] {
   const byMember   = new Map<string, SlipRow[]>();
   const feeCounts  = new Map<string, number>();
   const feeAmounts = new Map<string, number>();
+  const stakes     = new Map<string, number[]>();
 
-  for (const m of members) byMember.set(m.id, []);
+  for (const m of members) { byMember.set(m.id, []); stakes.set(m.id, []); }
   for (const s of slips)   byMember.get(s.league_member_id)?.push(s);
+  for (const r of stakeRows) stakes.get(r.league_member_id)?.push(r.stake);
   for (const f of fees) {
     feeCounts.set(f.league_member_id,  (feeCounts.get(f.league_member_id)  ?? 0) + 1);
     feeAmounts.set(f.league_member_id, (feeAmounts.get(f.league_member_id) ?? 0) + Math.abs(f.amount));
@@ -92,6 +101,9 @@ function buildPlayerData(members: MemberRow[], slips: SlipRow[], fees: FeeRow[])
 
     const totalStaked = settled.reduce((s, r) => s + r.stake, 0);
     const totalPayout = won.reduce((s, r) => s + Math.floor(r.stake * (r.final_odds ?? r.combined_odds)), 0);
+
+    const myStakes  = stakes.get(m.id) ?? [];
+    const stakeSum  = myStakes.reduce((a, b) => a + b, 0);
 
     // Streaks
     let winStreak = 0, loseStreak = 0, curW = 0, curL = 0;
@@ -118,6 +130,10 @@ function buildPlayerData(members: MemberRow[], slips: SlipRow[], fees: FeeRow[])
       biggestWonPayout: won.reduce((max, r) => Math.max(max, Math.floor(r.stake * (r.final_odds ?? r.combined_odds))), 0),
       highestWonOdds:   won.reduce((max, r) => Math.max(max, r.combined_odds), 0),
       lowestWonOdds:    won.reduce((min, r) => Math.min(min, r.combined_odds), Infinity),
+      maxStake:   myStakes.length ? Math.max(...myStakes) : 0,
+      minStake:   myStakes.length ? Math.min(...myStakes) : Infinity,
+      avgStake:   myStakes.length ? stakeSum / myStakes.length : null,
+      stakeCount: myStakes.length,
     };
   });
 }
@@ -188,6 +204,13 @@ function buildCategories(players: PlayerData[]) {
       stat: stat(players, (p) => p.lowestWonOdds < Infinity, (p) => p.lowestWonOdds, "min",
         (v) => ({ value: `${v.toFixed(2)}x`, detail: "vann ändå" })),
     },
+    {
+      emoji: "🦁",
+      title: "Högrollern",
+      description: "Högst snittinsats — vågar satsa stort",
+      stat: stat(players, (p) => p.avgStake !== null && p.stakeCount >= 2, (p) => p.avgStake!, "max",
+        (v, p) => ({ value: `${Math.round(v).toLocaleString("sv-SE")} coins`, detail: `snitt över ${p.stakeCount} slip` })),
+    },
   ];
 
   const shame: { emoji: string; title: string; description: string; stat: Stat }[] = [
@@ -253,6 +276,13 @@ function buildCategories(players: PlayerData[]) {
       description: "Flest förluster i rad",
       stat: stat(players, (p) => p.loseStreak >= 2, (p) => p.loseStreak, "max",
         (v) => ({ value: `${v} i rad` })),
+    },
+    {
+      emoji: "🐔",
+      title: "Fegis",
+      description: "Lägst snittinsats — vågar aldrig satsa stort",
+      stat: stat(players, (p) => p.avgStake !== null && p.stakeCount >= 2, (p) => p.avgStake!, "min",
+        (v, p) => ({ value: `${Math.round(v).toLocaleString("sv-SE")} coins`, detail: `snitt över ${p.stakeCount} slip` })),
     },
   ];
 
@@ -374,35 +404,23 @@ export default async function SkamsPage() {
 
   const totalPastDays = pastMatchDays.size;
 
-  // ── Stake stats per player (non-cancelled slips) ───────────────────────────
-  type StakeRow = { league_member_id: string; stake: number };
-  const stakesByMember = new Map<string, number[]>();
-  for (const m of members) stakesByMember.set(m.id, []);
-  for (const s of (activeSlipsRes.data ?? []) as StakeRow[]) {
-    stakesByMember.get(s.league_member_id)?.push(s.stake);
-  }
-
-  type StakeEntry = { name: string; max: number; min: number; avg: number; count: number };
-  const stakeEntries: StakeEntry[] = members
-    .map((m) => {
-      const arr = stakesByMember.get(m.id) ?? [];
-      const sum = arr.reduce((a, b) => a + b, 0);
-      return {
-        name:  memberName(m.profile),
-        max:   arr.length ? Math.max(...arr) : 0,
-        min:   arr.length ? Math.min(...arr) : 0,
-        avg:   arr.length ? Math.round(sum / arr.length) : 0,
-        count: arr.length,
-      };
-    })
-    .filter((e) => e.count > 0)
-    .sort((a, b) => b.avg - a.avg);
-
   const players = buildPlayerData(
     members,
     (slipsRes.data ?? []) as unknown as SlipRow[],
     (feesRes.data  ?? []) as unknown as FeeRow[],
+    (activeSlipsRes.data ?? []) as unknown as StakeRow[],
   );
+
+  // Stake table rows (derived from players → shares one source with the cards)
+  const stakeEntries = players
+    .filter((p) => p.stakeCount > 0)
+    .map((p) => ({
+      name: p.name,
+      max:  p.maxStake,
+      min:  p.minStake === Infinity ? 0 : p.minStake,
+      avg:  p.avgStake !== null ? Math.round(p.avgStake) : 0,
+    }))
+    .sort((a, b) => b.avg - a.avg);
 
   const { honor, shame } = buildCategories(players);
 
