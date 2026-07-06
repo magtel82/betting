@@ -4,6 +4,7 @@ import { useState, useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { correctMatchResult } from "../actions";
 import type { MatchWithTeams, MatchStatus } from "@/types";
+import { decidedBySuffix } from "@/lib/matches";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -41,7 +42,7 @@ function matchLabel(m: MatchWithTeams): string {
   });
   const statusMark =
     m.status === "finished"
-      ? ` ${m.home_score}–${m.away_score}`
+      ? ` ${m.home_score}–${m.away_score}${decidedBySuffix(m.decided_by)}`
       : m.status === "live"
       ? " ▶"
       : "";

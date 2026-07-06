@@ -2,6 +2,7 @@
 
 import type { MatchWithTeamsAndOdds, MatchStatus } from "@/types";
 import { FlagIcon } from "@/components/FlagIcon";
+import { decidedBySuffix } from "@/lib/matches";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -102,6 +103,11 @@ export function MatchCard({ match }: Props) {
           <div className="flex shrink-0 flex-col items-center">
             <span className="text-xl font-bold tabular-nums text-gray-900">
               {match.home_score}&thinsp;–&thinsp;{match.away_score}
+              {match.decided_by && match.decided_by !== "regular" && (
+                <span className="ml-1 text-xs font-normal text-gray-400">
+                  {decidedBySuffix(match.decided_by).trim()}
+                </span>
+              )}
             </span>
             {match.home_score_ht !== null && match.away_score_ht !== null && (
               <span className="text-xs text-gray-400">

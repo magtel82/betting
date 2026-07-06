@@ -19,23 +19,28 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   fetchMatchesForTournament,
   FD_STATUS_MAP,
+  FD_DURATION_MAP,
   FootballDataError,
   type FDMatch,
 } from "@/lib/adapters/football-data";
+import type { DecidedBy } from "@/types";
 import { resolveTeamShortName, datesWithinTolerance } from "./team-map";
 import { emptySyncResult, type SyncResult } from "./types";
 
 interface InternalMatch {
-  id:           string;
-  external_id:  string | null;
-  scheduled_at: string;
-  status:       string;
-  home_score:   number | null;
-  away_score:   number | null;
-  home_score_ht:number | null;
-  away_score_ht:number | null;
-  home_short:   string | null;
-  away_short:   string | null;
+  id:            string;
+  external_id:   string | null;
+  scheduled_at:  string;
+  status:        string;
+  home_score:    number | null;
+  away_score:    number | null;
+  home_score_ht: number | null;
+  away_score_ht: number | null;
+  reg_home_score:number | null;
+  reg_away_score:number | null;
+  decided_by:    DecidedBy | null;
+  home_short:    string | null;
+  away_short:    string | null;
 }
 
 // ─── Main sync function ───────────────────────────────────────────────────────
@@ -47,7 +52,7 @@ export async function syncResults(): Promise<SyncResult> {
   // 1. Fetch all non-void internal matches with team short_names
   const { data: matches, error: matchErr } = await db
     .from("matches")
-    .select("id, external_id, scheduled_at, status, home_score, away_score, home_score_ht, away_score_ht, home_team:teams!matches_home_team_id_fkey(short_name), away_team:teams!matches_away_team_id_fkey(short_name)")
+    .select("id, external_id, scheduled_at, status, home_score, away_score, home_score_ht, away_score_ht, reg_home_score, reg_away_score, decided_by, home_team:teams!matches_home_team_id_fkey(short_name), away_team:teams!matches_away_team_id_fkey(short_name)")
     .neq("status", "void");
 
   if (matchErr || !matches) {
@@ -64,19 +69,25 @@ export async function syncResults(): Promise<SyncResult> {
     away_score:     number | null;
     home_score_ht:  number | null;
     away_score_ht:  number | null;
+    reg_home_score: number | null;
+    reg_away_score: number | null;
+    decided_by:     DecidedBy | null;
     home_team:      { short_name: string } | null;
     away_team:      { short_name: string } | null;
   }>).map((m) => ({
-    id:            m.id,
-    external_id:   m.external_id,
-    scheduled_at:  m.scheduled_at,
-    status:        m.status,
-    home_score:    m.home_score,
-    away_score:    m.away_score,
-    home_score_ht: m.home_score_ht,
-    away_score_ht: m.away_score_ht,
-    home_short:    m.home_team?.short_name ?? null,
-    away_short:    m.away_team?.short_name ?? null,
+    id:             m.id,
+    external_id:    m.external_id,
+    scheduled_at:   m.scheduled_at,
+    status:         m.status,
+    home_score:     m.home_score,
+    away_score:     m.away_score,
+    home_score_ht:  m.home_score_ht,
+    away_score_ht:  m.away_score_ht,
+    reg_home_score: m.reg_home_score,
+    reg_away_score: m.reg_away_score,
+    decided_by:     m.decided_by,
+    home_short:     m.home_team?.short_name ?? null,
+    away_short:     m.away_team?.short_name ?? null,
   }));
 
   // Build lookup by external_id for fast path
@@ -159,18 +170,39 @@ export async function syncResults(): Promise<SyncResult> {
 
     // Map status
     const newStatus = FD_STATUS_MAP[fd.status] ?? "scheduled";
-    const newHomeScore     = fd.score.fullTime.home;
-    const newAwayScore     = fd.score.fullTime.away;
-    const newHomeScoreHt   = fd.score.halfTime.home;
-    const newAwayScoreHt   = fd.score.halfTime.away;
+
+    const decidedBy = FD_DURATION_MAP[fd.score.duration];
+    const isRegular = decidedBy === "regular";
+
+    const fullHome = fd.score.fullTime.home;
+    const fullAway = fd.score.fullTime.away;
+    const regHome  = fd.score.regularTime?.home ?? null;
+    const regAway  = fd.score.regularTime?.away ?? null;
+
+    // Displayed result is the score at the end of open play. For a shootout,
+    // fullTime is the aggregate tally (e.g. 7–6), so fall back to the 90-minute
+    // score, which is the meaningful scoreline to show.
+    const newHomeScore   = decidedBy === "penalties" ? regHome ?? fullHome : fullHome;
+    const newAwayScore   = decidedBy === "penalties" ? regAway ?? fullAway : fullAway;
+    const newHomeScoreHt = fd.score.halfTime.home;
+    const newAwayScoreHt = fd.score.halfTime.away;
+
+    // 90-minute score for settlement — stored only when decided past 90 min
+    // (always a draw, since a match only goes to ET/pens when level after 90).
+    const newRegHome   = isRegular ? null : regHome;
+    const newRegAway   = isRegular ? null : regAway;
+    const newDecidedBy = isRegular ? null : decidedBy;
 
     // Check if anything actually changed to avoid unnecessary writes
     const statusChanged  = internal.status    !== newStatus;
     const scoreChanged   =
-      internal.home_score    !== newHomeScore  ||
-      internal.away_score    !== newAwayScore  ||
-      internal.home_score_ht !== newHomeScoreHt ||
-      internal.away_score_ht !== newAwayScoreHt;
+      internal.home_score     !== newHomeScore   ||
+      internal.away_score     !== newAwayScore   ||
+      internal.home_score_ht  !== newHomeScoreHt ||
+      internal.away_score_ht  !== newAwayScoreHt ||
+      internal.reg_home_score !== newRegHome     ||
+      internal.reg_away_score !== newRegAway     ||
+      internal.decided_by     !== newDecidedBy;
 
     if (!statusChanged && !scoreChanged) {
       result.skipped++;
@@ -180,11 +212,14 @@ export async function syncResults(): Promise<SyncResult> {
     const { error: updateErr } = await db
       .from("matches")
       .update({
-        status:        newStatus,
-        home_score:    newHomeScore,
-        away_score:    newAwayScore,
-        home_score_ht: newHomeScoreHt,
-        away_score_ht: newAwayScoreHt,
+        status:         newStatus,
+        home_score:     newHomeScore,
+        away_score:     newAwayScore,
+        home_score_ht:  newHomeScoreHt,
+        away_score_ht:  newAwayScoreHt,
+        reg_home_score: newRegHome,
+        reg_away_score: newRegAway,
+        decided_by:     newDecidedBy,
       })
       .eq("id", internal.id);
 

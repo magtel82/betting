@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { settleMatchAction } from "../actions";
 import type { SettleMatchResult } from "@/lib/betting/settle-match";
 import type { MatchWithTeams } from "@/types";
+import { decidedBySuffix } from "@/lib/matches";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -25,7 +26,7 @@ function matchLabel(m: MatchWithTeams): string {
   const away = m.away_team ? m.away_team.short_name : "?";
   const score =
     m.home_score !== null && m.away_score !== null
-      ? ` ${m.home_score}–${m.away_score}`
+      ? ` ${m.home_score}–${m.away_score}${decidedBySuffix(m.decided_by)}`
       : "";
   const tag = m.status === "void" ? " (VOID)" : "";
   return `#${m.match_number} · ${home} – ${away}${score}${tag} · ${swDate(m.scheduled_at)}`;

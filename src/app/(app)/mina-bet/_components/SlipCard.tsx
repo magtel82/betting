@@ -3,8 +3,9 @@
 import { useState, useTransition, useMemo } from "react";
 import Link from "next/link";
 import { deleteSlipAction } from "../actions";
-import type { SlipStatus, BetStatus, BetOutcome } from "@/types";
+import type { SlipStatus, BetStatus, BetOutcome, DecidedBy } from "@/types";
 import { Flag } from "@/components/Flag";
+import { decidedBySuffix } from "@/lib/matches";
 
 export interface SelectionRow {
   id:            string;
@@ -20,6 +21,7 @@ export interface SelectionRow {
     status:       string;
     home_score:   number | null;
     away_score:   number | null;
+    decided_by:   DecidedBy | null;
     home_team:    { short_name: string; flag_code: string | null } | null;
     away_team:    { short_name: string; flag_code: string | null } | null;
   } | null;
@@ -202,6 +204,7 @@ export function SlipCard({ slip, showPlayer, isOwn, isNew = false }: Props) {
                       {hasScore ? (
                         <span className="mx-1.5 tabular-nums text-gray-900">
                           {match!.home_score}<span className="text-gray-300">–</span>{match!.away_score}
+                          <span className="text-gray-400">{decidedBySuffix(match!.decided_by)}</span>
                         </span>
                       ) : (
                         <span className="mx-1 text-gray-300">–</span>

@@ -23,7 +23,7 @@ export default async function MinaBetPage(props: {
         "  id, outcome, odds_snapshot, status,",
         "  match:matches(",
         "    id, match_number, stage, group_letter, scheduled_at,",
-        "    status, home_score, away_score,",
+        "    status, home_score, away_score, decided_by,",
         "    home_team:teams!matches_home_team_id_fkey(short_name, flag_code),",
         "    away_team:teams!matches_away_team_id_fkey(short_name, flag_code)",
         "  )",

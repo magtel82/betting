@@ -5,6 +5,7 @@ export type LeagueRole       = "admin" | "player";
 export type TournamentStatus = "upcoming" | "group_stage" | "knockout" | "finished";
 export type MatchStage       = "group" | "r32" | "r16" | "qf" | "sf" | "3rd_place" | "final";
 export type MatchStatus      = "scheduled" | "live" | "finished" | "void";
+export type DecidedBy        = "regular" | "extra_time" | "penalties";
 export type SlipStatus       = "open" | "locked" | "won" | "lost" | "void" | "cancelled";
 export type BetStatus        = "open" | "won" | "lost" | "void" | "cancelled";
 export type BetOutcome       = "home" | "draw" | "away";
@@ -71,6 +72,11 @@ export interface Match {
   away_score:    number | null;
   home_score_ht: number | null;
   away_score_ht: number | null;
+  // Set only for knockout matches decided past 90 min — the score after 90
+  // minutes (always a draw), used to settle slips on the 90-minute outcome.
+  reg_home_score:number | null;
+  reg_away_score:number | null;
+  decided_by:    DecidedBy | null;
   external_id:   string | null;
   created_at:    string;
   updated_at:    string;

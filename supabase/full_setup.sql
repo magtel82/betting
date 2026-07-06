@@ -71,6 +71,9 @@ create table matches (
   away_score    int,
   home_score_ht int,
   away_score_ht int,
+  reg_home_score int,        -- resultat efter 90 min (satt när decided_by != 'regular')
+  reg_away_score int,
+  decided_by    text         check (decided_by in ('regular', 'extra_time', 'penalties')),
   external_id   text         unique,
   created_at    timestamptz  not null default now(),
   updated_at    timestamptz  not null default now()
@@ -885,6 +888,8 @@ set search_path = public
 as $$
 declare
   v_match              record;
+  v_settle_home        int;
+  v_settle_away        int;
   v_outcome            text;
   v_sel                record;
   v_new_sel_status     bet_status;
@@ -912,16 +917,21 @@ begin
                               'status', v_match.status::text);
   end if;
 
+  -- Avgör på 90-minutersresultatet när det finns (förlängning/straffar),
+  -- annars på ordinarie slutresultat.
+  v_settle_home := coalesce(v_match.reg_home_score, v_match.home_score);
+  v_settle_away := coalesce(v_match.reg_away_score, v_match.away_score);
+
   if v_match.status = 'finished' and
-     (v_match.home_score is null or v_match.away_score is null) then
+     (v_settle_home is null or v_settle_away is null) then
     return jsonb_build_object('error', 'scores_missing');
   end if;
 
   if v_match.status = 'void' then
     v_outcome := null;
-  elsif v_match.home_score > v_match.away_score then
+  elsif v_settle_home > v_settle_away then
     v_outcome := 'home';
-  elsif v_match.away_score > v_match.home_score then
+  elsif v_settle_away > v_settle_home then
     v_outcome := 'away';
   else
     v_outcome := 'draw';

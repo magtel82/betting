@@ -24,8 +24,12 @@ export interface FDTeam {
 export interface FDScore {
   winner:   "HOME_TEAM" | "AWAY_TEAM" | "DRAW" | null;
   duration: "REGULAR" | "EXTRA_TIME" | "PENALTY_SHOOTOUT";
-  fullTime: { home: number | null; away: number | null };
-  halfTime: { home: number | null; away: number | null };
+  // fullTime is the aggregate after all play: for PENALTY_SHOOTOUT it includes
+  // the shootout tally (e.g. 7–6), NOT the pre-shootout scoreline.
+  fullTime:     { home: number | null; away: number | null };
+  halfTime:     { home: number | null; away: number | null };
+  // Present only when duration != "REGULAR" — the score after 90 minutes.
+  regularTime?: { home: number | null; away: number | null };
 }
 
 // football-data.org status values we care about
@@ -128,4 +132,11 @@ export const FD_STATUS_MAP: Record<FDMatchStatus, "scheduled" | "live" | "finish
   POSTPONED:  "scheduled",
   CANCELLED:  "void",
   SUSPENDED:  "void",
+};
+
+// Maps football-data.org score.duration → how the match was decided.
+export const FD_DURATION_MAP: Record<FDScore["duration"], "regular" | "extra_time" | "penalties"> = {
+  REGULAR:           "regular",
+  EXTRA_TIME:        "extra_time",
+  PENALTY_SHOOTOUT:  "penalties",
 };
