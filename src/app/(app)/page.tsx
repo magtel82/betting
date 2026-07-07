@@ -146,6 +146,18 @@ export default async function DashboardPage() {
       <TopBar title="VM Bet 2026" />
       <div className="mx-auto max-w-lg space-y-5 px-4 py-5">
 
+        {/* ── Vinnarbanner ──────────────────────────────────────────────────── */}
+        <section
+          className="flex items-center gap-3 rounded-2xl border border-[var(--coin)]/30 px-4 py-3.5 shadow-sm"
+          style={{ background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)" }}
+        >
+          <span className="text-2xl" aria-hidden>🏆</span>
+          <div>
+            <p className="text-sm font-bold text-amber-900">Grattis till vinsten i VM-spelet Henke!!</p>
+            <p className="mt-0.5 text-xs text-amber-700">Ingen mening att fortsätta mer nu…</p>
+          </div>
+        </section>
+
         {/* ── Saldo (hero) ──────────────────────────────────────────────────── */}
         <section
           className="overflow-hidden rounded-2xl p-5 text-white shadow-lg shadow-gray-900/15"
