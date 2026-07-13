@@ -179,6 +179,18 @@ export async function syncResults(): Promise<SyncResult> {
     const regHome  = fd.score.regularTime?.home ?? null;
     const regAway  = fd.score.regularTime?.away ?? null;
 
+    // A match decided past 90 min must expose its 90-minute score, otherwise we
+    // cannot settle on the (drawn) 90-minute outcome. Skip rather than write a
+    // NULL reg score and let settle_match fall back to the full-time result,
+    // which would settle knockout draws as a win for the eventual winner.
+    if (!isRegular && (regHome === null || regAway === null)) {
+      result.errors.push(
+        `Match ${internal.id} (ext ${externalIdStr}): duration=${fd.score.duration} but score.regularTime missing — skipping to avoid settling on full-time score`
+      );
+      result.skipped++;
+      continue;
+    }
+
     // Displayed result is the score at the end of open play. For a shootout,
     // fullTime is the aggregate tally (e.g. 7–6), so fall back to the 90-minute
     // score, which is the meaningful scoreline to show.
